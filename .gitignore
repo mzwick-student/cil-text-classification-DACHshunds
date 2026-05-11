@@ -78,6 +78,11 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Project artifacts
+embeddings/
+submissions/
+requirements.txt
+
 # IPython
 profile_default/
 ipython_config.py
