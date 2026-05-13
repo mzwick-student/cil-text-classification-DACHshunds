@@ -78,7 +78,9 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Project artifacts
+# Project experiment artifacts
+results/
+experiments/
 embeddings/
 submissions/
 requirements.txt
