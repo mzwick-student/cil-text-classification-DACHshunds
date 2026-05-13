@@ -24,7 +24,6 @@ grid and writes two CSV files:
 | TF-IDF char | `char_wb 3-5`, `char_wb 3-6` | Logistic Regression, Linear SVM, Ridge Classifier, Complement NB |
 | GloVe | average, TF-IDF weighted, mean+max, SIF | Logistic Regression, Linear SVM, Ridge Classifier |
 | fastText | average, TF-IDF weighted, mean+max, SIF | Logistic Regression, Linear SVM, Ridge Classifier |
-| word2vec | average, TF-IDF weighted, mean+max, SIF | Logistic Regression, Linear SVM, Ridge Classifier |
 
 The report should usually show the majority baseline plus the best member of
 each feature family. The full grid remains available for appendix/ablation
@@ -52,11 +51,13 @@ Full run with static embeddings:
 ```bash
 python -m baselines.classic_ml_baselines \
   --mode all \
-  --glove-path embeddings/glove.6B.300d.txt \
-  --fasttext-path embeddings/wiki.de.vec \
-  --word2vec-path embeddings/word2vec.txt
+  --glove-path experiments/embeddings/glove.6B.300d.txt \
+  --fasttext-path experiments/embeddings/fasttext.vec
 ```
 
 Embedding files are optional. Families without a path are skipped. The loader
-expects text-format vector files such as GloVe `.txt`, fastText `.vec`, or
-word2vec text `.vec/.txt` with an optional `num_words dim` header.
+expects text-format vector files such as GloVe `.txt` or fastText `.vec` with
+an optional `num_words dim` header.
+
+Use `load_embeddings.ipynb` to download GloVe and the merged English/German
+aligned fastText file into `experiments/embeddings/`.

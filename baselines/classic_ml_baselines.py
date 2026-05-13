@@ -52,6 +52,19 @@ class ExperimentResult:
     notes: str = ""
 
 
+@dataclass
+class ProgressTracker:
+    total_jobs: int
+    jobs_run: int = 0
+
+    def start(self, job_name: str) -> None:
+        self.jobs_run += 1
+        print(
+            f"[job] {job_name} | jobs_run: {self.jobs_run}/{self.total_jobs}",
+            flush=True,
+        )
+
+
 def clean_text(text: object) -> str:
     """Normalize whitespace while preserving punctuation, casing, and emojis."""
     return re.sub(r"\s+", " ", str(text)).strip()
@@ -413,7 +426,10 @@ def run_estimator(
     x_val,
     y_val: np.ndarray,
     notes: str = "",
+    progress: ProgressTracker | None = None,
 ) -> ExperimentResult:
+    if progress is not None:
+        progress.start(experiment)
     try:
         start = time.perf_counter()
         estimator.fit(x_train, y_train)
@@ -452,6 +468,7 @@ def run_dummy_baseline(
     y_train: np.ndarray,
     x_val: pd.Series,
     y_val: np.ndarray,
+    progress: ProgressTracker,
 ) -> ExperimentResult:
     return run_estimator(
         experiment="majority__most_frequent",
@@ -465,6 +482,7 @@ def run_dummy_baseline(
         x_val=x_val,
         y_val=y_val,
         notes="Always predicts the most frequent training label.",
+        progress=progress,
     )
 
 
@@ -475,6 +493,7 @@ def run_sparse_experiments(
     y_val: np.ndarray,
     max_features: int,
     max_iter: int,
+    progress: ProgressTracker,
 ) -> list[ExperimentResult]:
     results = []
     classifiers = make_sparse_classifiers(max_iter=max_iter)
@@ -498,6 +517,7 @@ def run_sparse_experiments(
                     y_train=y_train,
                     x_val=x_val,
                     y_val=y_val,
+                    progress=progress,
                 )
             )
             print_result(results[-1])
@@ -510,12 +530,15 @@ def run_embedding_experiments(
     x_val: pd.Series,
     y_val: np.ndarray,
     args: argparse.Namespace,
+    progress: ProgressTracker,
 ) -> list[ExperimentResult]:
     results = []
     classifiers = make_dense_classifiers(max_iter=args.max_iter)
     specs = embedding_feature_specs(args)
 
     for family, variant, description, transformer in specs:
+        feature_extraction_job = f"{family}__{variant}__features"
+        progress.start(feature_extraction_job)
         try:
             start = time.perf_counter()
             x_train_dense = transformer.fit_transform(x_train)
@@ -530,7 +553,7 @@ def run_embedding_experiments(
             )
         except Exception as exc:
             failed = ExperimentResult(
-                experiment=f"{family}__{variant}__features",
+                experiment=feature_extraction_job,
                 family=family,
                 representation=description,
                 variant=variant,
@@ -557,6 +580,7 @@ def run_embedding_experiments(
                     x_val=x_val_dense,
                     y_val=y_val,
                     notes=notes,
+                    progress=progress,
                 )
             )
             print_result(results[-1])
@@ -574,6 +598,19 @@ def print_result(result: ExperimentResult) -> None:
         f"acc={result.accuracy:.5f} "
         f"macro_f1={result.macro_f1:.5f}"
     )
+
+
+def count_jobs(args: argparse.Namespace) -> int:
+    total = 1
+    if args.mode in {"sparse", "all"}:
+        total += len(sparse_feature_specs(args.max_features)) * len(
+            make_sparse_classifiers(max_iter=args.max_iter)
+        )
+    if args.mode in {"embeddings", "all"}:
+        total += len(embedding_feature_specs(args)) * (
+            1 + len(make_dense_classifiers(max_iter=args.max_iter))
+        )
+    return total
 
 
 def write_results(results: list[ExperimentResult], output_dir: Path) -> None:
@@ -630,7 +667,6 @@ def main() -> None:
     args = parse_args()
     df = load_data(args.train_path)
     df["text_clean"] = df["sentence"].map(clean_text)
-    ##To run on subset of the data, set --sample-size to an integer number of examples. This will be stratified by label and applied before the train/validation split.
     if args.sample_size is not None and args.sample_size < len(df):
         df, _ = train_test_split(
             df,
@@ -655,7 +691,9 @@ def main() -> None:
     class_counts = {int(label): int(count) for label, count in sorted(Counter(y_train).items())}
     print(f"Class counts: {class_counts}")
 
-    results = [run_dummy_baseline(x_train, y_train, x_val, y_val)]
+    progress = ProgressTracker(total_jobs=count_jobs(args))
+
+    results = [run_dummy_baseline(x_train, y_train, x_val, y_val, progress)]
     print_result(results[-1])
 
     if args.mode in {"sparse", "all"}:
@@ -667,6 +705,7 @@ def main() -> None:
                 y_val,
                 max_features=args.max_features,
                 max_iter=args.max_iter,
+                progress=progress,
             )
         )
     if args.mode in {"embeddings", "all"}:
@@ -677,6 +716,7 @@ def main() -> None:
                 x_val,
                 y_val,
                 args=args,
+                progress=progress,
             )
         )
 
