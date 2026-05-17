@@ -98,8 +98,8 @@ def score_predictions(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float
 def make_dense_classifiers(max_iter: int) -> dict[str, BaseEstimator]:
     return {
         "logreg": LogisticRegression(C=1.0, max_iter=max_iter),
-        "linear_svm": LinearSVC(C=1.0),
-        "ridge_classifier": RidgeClassifier(alpha=1.0),
+        #"linear_svm": LinearSVC(C=1.0),
+        #"ridge_classifier": RidgeClassifier(alpha=1.0),
     }
 
 
