@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=cil-bert-grad-surgery
+#SBATCH --account=cil_jobs
 #SBATCH --output=slurm-%A_%a.out
 #SBATCH --error=slurm-%A_%a.err
 #SBATCH --time=16:00:00
