@@ -171,13 +171,18 @@ class ExperimentRunner:
             os.environ.setdefault("WANDB_ENTITY", self.config.logging.wandb_entity)
 
     def _set_seed(self) -> None:
+        os.environ["PYTHONHASHSEED"] = str(self.seed)
         random.seed(self.seed)
         np.random.seed(self.seed)
         try:
             import torch
+            from transformers import set_seed as hf_set_seed
 
+            hf_set_seed(self.seed)
             torch.manual_seed(self.seed)
             torch.cuda.manual_seed_all(self.seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
         except ImportError:
             pass
 
