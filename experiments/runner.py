@@ -42,7 +42,7 @@ class ExperimentRunner:
             train_dataset=train_ds,
             eval_dataset=val_ds,
             compute_metrics=SentimentTrainer.metrics,
-            tokenizer=tokenizer,
+            #tokenizer=tokenizer,
         )
 
         train_result = trainer.train()
@@ -121,7 +121,7 @@ class ExperimentRunner:
         training = self.config.training
         return TrainingArguments(
             output_dir=str(self.output_dir / "checkpoints"),
-            overwrite_output_dir=True,
+            #overwrite_output_dir=True,
             per_device_train_batch_size=training.batch_size,
             per_device_eval_batch_size=training.eval_batch_size,
             learning_rate=training.learning_rate,
