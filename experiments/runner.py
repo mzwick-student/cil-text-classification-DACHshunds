@@ -67,6 +67,14 @@ class ExperimentRunner:
         }
         trainer.log({f"final/{key}": value for key, value in metrics.items()})
         self._write_json("metrics.json", metrics)
+        
+        # Finish the W&B run so the next seed starts a fresh run
+        try:
+            import wandb
+            wandb.finish()
+        except ImportError:
+            pass
+        
         return metrics
 
     def _load_split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
