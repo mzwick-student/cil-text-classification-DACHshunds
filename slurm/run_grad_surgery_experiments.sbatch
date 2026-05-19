@@ -3,18 +3,20 @@
 #SBATCH --output=slurm-%A_%a.out
 #SBATCH --error=slurm-%A_%a.err
 #SBATCH --time=24:00:00
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
 #SBATCH --gres=gpu:1
-#SBATCH --array=0-1
+#SBATCH --array=0-2
 
 set -euo pipefail
+
+: "${WANDB_API_KEY:?Set WANDB_API_KEY in the submission environment before calling sbatch}"
+: "${HF_TOKEN:?Set HF_TOKEN in the submission environment before calling sbatch}"
 
 cd "${SLURM_SUBMIT_DIR}"
 
 CONFIGS=(
-  "configs/bert_base.json"
-  "configs/lora_bert_base.json"
+  "configs/lora_bert_default.json"
+  "configs/lora_bert_pcgrad.json"
+  "configs/lora_bert_gradvac.json"
 )
 
 CONFIG="${CONFIGS[$SLURM_ARRAY_TASK_ID]}"

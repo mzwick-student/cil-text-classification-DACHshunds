@@ -1,0 +1,29 @@
+{
+  "name": "lora_bert_base",
+  "seeds": [1, 2, 3],
+  "trainer": "gradvac",
+  "model": {
+    "kind": "lora_bert",
+    "name": "xlm-roberta-base",
+    "geometry": "circular",
+    "lora_r": 128,
+    "lora_alpha": 64,
+    "lora_dropout": 0.01,
+    "hub_model_id": "MichaHenh/cil-sentiment-anylsis"
+  },
+  "training": {
+    "batch_size": 64,
+    "eval_batch_size": 1024,
+    "learning_rate": 1.5e-4,
+    "scheduler": "cosine",
+    "epochs": 5,
+    "logging_steps": 500,
+    "eval_steps": 500
+  },
+  "data": {
+    "train": "data/train_lang.csv"
+  },
+  "logging": {
+    "wandb_project": "cil-sentiment"
+  }
+}
