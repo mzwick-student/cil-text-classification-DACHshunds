@@ -3,7 +3,7 @@
 #SBATCH --account=cil_jobs
 #SBATCH --output=slurm-%A_%a.out
 #SBATCH --error=slurm-%A_%a.err
-#SBATCH --time=16:00:00
+#SBATCH --time=12:00:00
 #SBATCH --gpus=5060ti:1
 #SBATCH --array=0-2
 #SBATCH --export=ALL
