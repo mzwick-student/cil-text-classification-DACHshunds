@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+shopt -s expand_aliases
+source "${HOME}/.bashrc"
+source "${HOME}/.slurm_tokens"
+
 cd "${SLURM_SUBMIT_DIR}"
 
 CONFIGS=(
@@ -20,4 +24,4 @@ CONFIGS=(
 
 CONFIG="${CONFIGS[$SLURM_ARRAY_TASK_ID]}"
 
-srun --gpus=5060ti:1 python scripts/run_experiment.py --config "${CONFIG}"
+python scripts/run_experiment.py --config "${CONFIG}"
