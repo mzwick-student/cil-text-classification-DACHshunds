@@ -15,10 +15,4 @@ source "${HOME}/.slurm_tokens"
 
 cd "${SLURM_SUBMIT_DIR}"
 
-CONFIGS=(
-  "configs/lora_bert_gradvac_r32.json"
-)
-
-CONFIG="${CONFIGS[$SLURM_ARRAY_TASK_ID]}"
-
-python scripts/run_experiment.py --config "${CONFIG}"
+python scripts/run_experiment.py --config "configs/lora_bert_gradvac_r32.json"
