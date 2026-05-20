@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=cil-bert-grad-surgery
 #SBATCH --account=cil_jobs
-#SBATCH --output=slurm-%A_%a.out
-#SBATCH --error=slurm-%A_%a.err
+#SBATCH --output=slurm-%A.out
+#SBATCH --error=slurm-%A.err
 #SBATCH --time=6:00:00
 #SBATCH --gpus=5060ti:1
 #SBATCH --export=ALL
