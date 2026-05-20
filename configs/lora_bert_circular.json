@@ -1,7 +1,7 @@
 {
   "name": "lora_bert_base",
   "seeds": [1, 2, 3],
-  "trainer": "gradvac",
+  "trainer": "default",
   "model": {
     "kind": "lora_bert",
     "name": "xlm-roberta-base",
