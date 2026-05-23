@@ -100,7 +100,8 @@ def build_training_arguments(args: argparse.Namespace, run_output_dir: Path) -> 
         "learning_rate": args.learning_rate,
         "weight_decay": args.weight_decay,
         "warmup_ratio": args.warmup_ratio,
-        "logging_strategy": "epoch",
+        "logging_strategy": "steps",
+        "logging_steps": args.logging_steps,
         "save_strategy": "epoch",
         "load_best_model_at_end": True,
         "metric_for_best_model": "cil_score",
@@ -109,6 +110,7 @@ def build_training_arguments(args: argparse.Namespace, run_output_dir: Path) -> 
         "report_to": "none",
         "save_total_limit": args.save_total_limit,
         "fp16": args.fp16,
+        "lr_scheduler_type": args.lr_scheduler_type,
     }
     kwargs[strategy_name] = "epoch"
     if "dataloader_num_workers" in signature.parameters:
@@ -117,7 +119,7 @@ def build_training_arguments(args: argparse.Namespace, run_output_dir: Path) -> 
 
 
 def extract_epoch_history(experiment: str, log_history: list[dict]) -> list[EpochResult]:
-    train_loss_by_epoch = {}
+    train_loss_by_epoch = []
     rows = []
     for log in log_history:
         epoch = log.get("epoch")
@@ -125,13 +127,17 @@ def extract_epoch_history(experiment: str, log_history: list[dict]) -> list[Epoc
             continue
         rounded_epoch = round(float(epoch), 6)
         if "loss" in log:
-            train_loss_by_epoch[rounded_epoch] = float(log["loss"])
+            train_loss_by_epoch.append((rounded_epoch, float(log["loss"])))
         if "eval_loss" in log:
+            latest_train_loss = None
+            for train_epoch, train_loss in train_loss_by_epoch:
+                if train_epoch <= rounded_epoch:
+                    latest_train_loss = train_loss
             rows.append(
                 EpochResult(
                     experiment=experiment,
                     epoch=rounded_epoch,
-                    train_loss=train_loss_by_epoch.get(rounded_epoch),
+                    train_loss=latest_train_loss,
                     val_loss=float(log["eval_loss"]),
                     accuracy=float(log["eval_accuracy"]),
                     macro_f1=float(log["eval_macro_f1"]),
@@ -355,6 +361,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=2e-5)
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-ratio", type=float, default=0.06)
+    parser.add_argument("--lr-scheduler-type", type=str, default="linear")
+    parser.add_argument("--logging-steps", type=int, default=500)
     parser.add_argument("--save-total-limit", type=int, default=1)
     parser.add_argument("--dataloader-num-workers", type=int, default=0)
     parser.add_argument("--fp16", action="store_true")

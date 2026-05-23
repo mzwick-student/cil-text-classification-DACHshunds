@@ -42,11 +42,21 @@ def plot_epoch_scores(
         raise ValueError(f"{input_path} has no epoch rows to plot")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    history = history.sort_values(["experiment", "epoch"]).reset_index(drop=True)
+    sort_columns = ["experiment", "epoch"]
+    if "seed" in history.columns:
+        sort_columns = ["experiment", "seed", "epoch"]
+    history = history.sort_values(sort_columns).reset_index(drop=True)
 
     fig, ax = plt.subplots(figsize=(7.0, 4.2))
-    for experiment, rows in history.groupby("experiment", sort=False):
-        ax.plot(rows["epoch"], rows["cil_score"], marker="o", linewidth=1.8, label=experiment)
+    group_columns = ["experiment"]
+    if "seed" in history.columns:
+        group_columns.append("seed")
+    for group_key, rows in history.groupby(group_columns, sort=False):
+        if isinstance(group_key, tuple):
+            label = f"{group_key[0]} seed={group_key[1]}"
+        else:
+            label = str(group_key)
+        ax.plot(rows["epoch"], rows["cil_score"], marker="o", linewidth=1.8, label=label)
     ax.set_xlabel("Epoch")
     ax.set_ylabel("CIL-score")
     ax.set_title(title)

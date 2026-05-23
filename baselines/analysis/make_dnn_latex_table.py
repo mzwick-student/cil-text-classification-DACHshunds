@@ -13,6 +13,7 @@ from baselines.analysis.table_utils import (
 
 
 FASTEST_COLUMNS = [
+    "seed",
     "model",
     "embedding",
     "representation",
@@ -23,6 +24,7 @@ FASTEST_COLUMNS = [
     "total_seconds",
 ]
 FASTEST_HEADERS = [
+    "Seed",
     "Model",
     "Embedding",
     "Representation",
@@ -81,4 +83,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

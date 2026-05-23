@@ -80,7 +80,9 @@ target/
 
 # Project experiment artifacts
 results/
-experiments/
+experiments/**
+!experiments/**/
+!experiments/**/*.csv
 embeddings/
 submissions/
 requirements.txt

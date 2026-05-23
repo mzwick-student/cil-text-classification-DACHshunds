@@ -13,6 +13,7 @@ from baselines.analysis.table_utils import (
 
 
 FASTEST_COLUMNS = [
+    "seed",
     "family",
     "representation",
     "variant",
@@ -23,6 +24,7 @@ FASTEST_COLUMNS = [
     "total_seconds",
 ]
 FASTEST_HEADERS = [
+    "Seed",
     "Family",
     "Representation",
     "Variant",
@@ -33,6 +35,7 @@ FASTEST_HEADERS = [
     "Seconds",
 ]
 FULL_COLUMNS = [
+    "seed",
     "family",
     "representation",
     "variant",
@@ -91,4 +94,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
