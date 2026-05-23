@@ -36,7 +36,6 @@ class DnnExperimentSpec:
     input_type: str
     representation: str
     model_name: str
-    report_rule: str
 
     @property
     def experiment(self) -> str:
@@ -54,9 +53,10 @@ class DnnExperimentResult:
     input_type: str
     representation: str
     model: str
-    report_rule: str
     status: str
     best_epoch: int | None = None
+    best_epoch_train_loss: float | None = None
+    best_epoch_val_loss: float | None = None
     train_seconds: float | None = None
     accuracy: float | None = None
     macro_f1: float | None = None
@@ -64,8 +64,6 @@ class DnnExperimentResult:
     cil_score: float | None = None
     quadratic_weighted_kappa: float | None = None
     notes: str = ""
-
-
 @dataclass(frozen=True)
 class EpochResult:
     experiment: str
@@ -201,88 +199,16 @@ class BiLSTMClassifier(nn.Module):
         final = torch.cat([hidden[-2], hidden[-1]], dim=1)
         return self.classifier(self.dropout(final))
 
-
-class SmallTransformerClassifier(nn.Module):
-    def __init__(
-        self,
-        embedding_matrix: np.ndarray,
-        max_length: int,
-        num_layers: int,
-        dropout: float,
-        fine_tune_embeddings: bool,
-    ):
-        super().__init__()
-        weights = torch.tensor(embedding_matrix, dtype=torch.float32)
-        dim = embedding_matrix.shape[1]
-        self.embedding = nn.Embedding.from_pretrained(
-            weights,
-            freeze=not fine_tune_embeddings,
-            padding_idx=PAD_INDEX,
-        )
-        self.position_embedding = nn.Embedding(max_length, dim)
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=dim,
-            nhead=choose_attention_heads(dim),
-            dim_feedforward=dim * 2,
-            dropout=dropout,
-            batch_first=True,
-        )
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(dim, N_CLASSES)
-
-    def forward(self, token_ids, lengths):
-        positions = torch.arange(token_ids.size(1), device=token_ids.device)
-        positions = positions.unsqueeze(0).expand_as(token_ids)
-        padding_mask = token_ids.eq(PAD_INDEX)
-        encoded = self.embedding(token_ids) + self.position_embedding(positions)
-        encoded = self.encoder(encoded, src_key_padding_mask=padding_mask)
-        non_pad = (~padding_mask).unsqueeze(-1).float()
-        pooled = (encoded * non_pad).sum(dim=1) / non_pad.sum(dim=1).clamp(min=1.0)
-        return self.classifier(self.dropout(pooled))
-
-
-def choose_attention_heads(dim: int) -> int:
-    for heads in [8, 6, 5, 4, 3, 2]:
-        if dim % heads == 0:
-            return heads
-    return 1
-
-
 def experiment_specs(args: argparse.Namespace) -> list[DnnExperimentSpec]:
-    specs = []
-    if args.glove_path:
-        specs.extend(
-            [
-                DnnExperimentSpec("D1", "glove", "document_vector", "average", "mlp", "XOR with D2"),
-                DnnExperimentSpec("D2", "glove", "document_vector", "tfidf_weighted", "mlp", "best GloVe MLP"),
-                DnnExperimentSpec("D5", "glove", "token_sequence", "pretrained_token_vectors", "textcnn", "compare to D7"),
-                DnnExperimentSpec("D6", "glove", "token_sequence", "pretrained_token_vectors", "bilstm", "compare to D8"),
-                DnnExperimentSpec("D10", "glove", "token_sequence", "pretrained_token_vectors", "small_transformer", "optional, lowest priority"),
-            ]
-        )
-    if args.fasttext_path:
-        specs.extend(
-            [
-                DnnExperimentSpec("D3", "fasttext", "document_vector", "average", "mlp", "XOR with D4"),
-                DnnExperimentSpec("D4", "fasttext", "document_vector", "tfidf_weighted", "mlp", "best fastText MLP"),
-                DnnExperimentSpec("D7", "fasttext", "token_sequence", "pretrained_token_vectors", "textcnn", "likely report"),
-                DnnExperimentSpec("D8", "fasttext", "token_sequence", "pretrained_token_vectors", "bilstm", "likely report"),
-                DnnExperimentSpec("D9", "fasttext", "token_sequence", "pretrained_token_vectors", "small_transformer", "optional diagnostic report"),
-            ]
-        )
-    if not args.include_transformers:
-        specs = [spec for spec in specs if spec.model_name != "small_transformer"]
-    return specs
+    return [
+        DnnExperimentSpec("D1", "fasttext", "document_vector", "average", "mlp"),
+        DnnExperimentSpec("D2", "fasttext", "token_sequence", "pretrained_token_vectors", "textcnn"),
+        DnnExperimentSpec("D3", "fasttext", "token_sequence", "pretrained_token_vectors", "bilstm"),
+    ]
 
 
 def embedding_paths(args: argparse.Namespace) -> dict[str, str]:
-    paths = {}
-    if args.glove_path:
-        paths["glove"] = args.glove_path
-    if args.fasttext_path:
-        paths["fasttext"] = args.fasttext_path
-    return paths
+    return {"fasttext": args.fasttext_path}
 
 
 def prepare_embedding_resources(
@@ -402,14 +328,6 @@ def make_model(
             dropout=args.dropout,
             fine_tune_embeddings=args.fine_tune_embeddings,
         )
-    if spec.model_name == "small_transformer":
-        return SmallTransformerClassifier(
-            embedding_matrix=embedding_matrix,
-            max_length=args.max_length,
-            num_layers=args.transformer_layers,
-            dropout=args.dropout,
-            fine_tune_embeddings=args.fine_tune_embeddings,
-        )
     raise ValueError(f"Unknown model: {spec.model_name}")
 
 
@@ -459,9 +377,10 @@ def run_training_job(
         input_type=spec.input_type,
         representation=spec.representation,
         model=spec.model_name,
-        report_rule=spec.report_rule,
         status="ok",
         best_epoch=best_epoch.epoch,
+        best_epoch_train_loss=best_epoch.train_loss,
+        best_epoch_val_loss=best_epoch.val_loss,
         train_seconds=train_seconds,
         accuracy=best_epoch.accuracy,
         macro_f1=best_epoch.macro_f1,
@@ -620,7 +539,6 @@ def run_experiments(
                 input_type=spec.input_type,
                 representation=spec.representation,
                 model=spec.model_name,
-                report_rule=spec.report_rule,
                 status="failed",
                 notes=f"{type(exc).__name__}: {exc}",
             )
@@ -686,14 +604,13 @@ def write_results(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run DNN baselines over static embeddings."
+        description="Run DNN baselines over fastText embeddings."
     )
     parser.add_argument("--train-path", type=Path, default=Path("data/train.csv"))
     parser.add_argument("--output-dir", type=Path, default=Path("experiments/classic_dnn"))
     parser.add_argument("--validation-size", type=float, default=0.1)
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--sample-size", type=int, default=None)
-    parser.add_argument("--glove-path", type=str, default="experiments/embeddings/glove.6B.300d.txt")
     parser.add_argument("--fasttext-path", type=str, default="experiments/embeddings/fasttext.vec")
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=128)
@@ -704,8 +621,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cnn-num-filters", type=int, default=128)
     parser.add_argument("--cnn-kernel-sizes", type=int, nargs="+", default=[3, 4, 5])
     parser.add_argument("--lstm-hidden-dim", type=int, default=128)
-    parser.add_argument("--transformer-layers", type=int, default=2)
-    parser.add_argument("--include-transformers", action="store_true")
     parser.add_argument("--fine-tune-embeddings", action="store_true")
     parser.add_argument("--max-length", type=int, default=256)
     parser.add_argument("--max-sequence-vocab", type=int, default=200000)
@@ -718,14 +633,12 @@ def main() -> None:
     torch.manual_seed(args.random_state)
     np.random.seed(args.random_state)
 
-    if args.glove_path and not Path(args.glove_path).exists():
-        args.glove_path = None
     if args.fasttext_path and not Path(args.fasttext_path).exists():
         args.fasttext_path = None
-    if not args.glove_path and not args.fasttext_path:
+    if not args.fasttext_path:
         raise FileNotFoundError(
-            "No embedding files found. Run load_embeddings.ipynb first or pass "
-            "--glove-path / --fasttext-path."
+            "No fastText embedding file found. Run load_embeddings.ipynb first "
+            "or pass --fasttext-path."
         )
 
     df = load_data(args.train_path)

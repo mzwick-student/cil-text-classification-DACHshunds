@@ -98,8 +98,8 @@ def score_predictions(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float
 def make_dense_classifiers(max_iter: int) -> dict[str, BaseEstimator]:
     return {
         "logreg": LogisticRegression(C=1.0, max_iter=max_iter),
-        #"linear_svm": LinearSVC(C=1.0),
-        #"ridge_classifier": RidgeClassifier(alpha=1.0),
+        "linear_svm": LinearSVC(C=1.0),
+        "ridge_classifier": RidgeClassifier(alpha=1.0),
     }
 
 
@@ -113,30 +113,6 @@ def sparse_feature_specs(max_features: int) -> list[tuple[str, str, str, BaseEst
     return [
         (
             "bow",
-            "word_1_1",
-            "word n-grams=(1, 1)",
-            CountVectorizer(
-                preprocessor=clean_text,
-                lowercase=True,
-                ngram_range=(1, 1),
-                max_features=max_features,
-                min_df=2,
-            ),
-        ),
-        (
-            "bow",
-            "word_1_2",
-            "word n-grams=(1, 2)",
-            CountVectorizer(
-                preprocessor=clean_text,
-                lowercase=True,
-                ngram_range=(1, 2),
-                max_features=max_features,
-                min_df=2,
-            ),
-        ),
-        (
-            "bow",
             "word_1_3",
             "word n-grams=(1, 3)",
             CountVectorizer(
@@ -149,52 +125,12 @@ def sparse_feature_specs(max_features: int) -> list[tuple[str, str, str, BaseEst
         ),
         (
             "tfidf_word",
-            "word_1_1",
-            "word n-grams=(1, 1)",
-            TfidfVectorizer(
-                preprocessor=clean_text,
-                lowercase=True,
-                ngram_range=(1, 1),
-                max_features=max_features,
-                min_df=2,
-                sublinear_tf=True,
-            ),
-        ),
-        (
-            "tfidf_word",
-            "word_1_2",
-            "word n-grams=(1, 2)",
-            TfidfVectorizer(
-                preprocessor=clean_text,
-                lowercase=True,
-                ngram_range=(1, 2),
-                max_features=max_features,
-                min_df=2,
-                sublinear_tf=True,
-            ),
-        ),
-        (
-            "tfidf_word",
             "word_1_3",
             "word n-grams=(1, 3)",
             TfidfVectorizer(
                 preprocessor=clean_text,
                 lowercase=True,
                 ngram_range=(1, 3),
-                max_features=max_features,
-                min_df=2,
-                sublinear_tf=True,
-            ),
-        ),
-        (
-            "tfidf_char",
-            "char_wb_3_5",
-            "char_wb n-grams=(3, 5)",
-            TfidfVectorizer(
-                preprocessor=clean_text,
-                lowercase=True,
-                analyzer="char_wb",
-                ngram_range=(3, 5),
                 max_features=max_features,
                 min_df=2,
                 sublinear_tf=True,
@@ -220,17 +156,9 @@ def sparse_feature_specs(max_features: int) -> list[tuple[str, str, str, BaseEst
 class StaticEmbeddingVectorizer(BaseEstimator, TransformerMixin):
     """Turn a document into one vector using pretrained static word vectors."""
 
-    def __init__(
-        self,
-        embedding_path: str,
-        strategy: str = "average",
-        sif_a: float = 1e-3,
-        max_sif_documents: int = 50000,
-    ):
+    def __init__(self, embedding_path: str, strategy: str = "average"):
         self.embedding_path = embedding_path
         self.strategy = strategy
-        self.sif_a = sif_a
-        self.max_sif_documents = max_sif_documents
 
     def fit(self, texts: Iterable[str], y=None):
         texts = list(texts)
@@ -240,21 +168,11 @@ class StaticEmbeddingVectorizer(BaseEstimator, TransformerMixin):
         self.term_counts_ = counts
         self.idf_ = self._compute_idf(tokenized)
         self.embeddings_, self.dim_, self.coverage_ = self._load_embeddings(set(counts))
-        if self.strategy == "sif":
-            sif_vectors = self._documents_to_matrix(
-                tokenized[: self.max_sif_documents],
-                remove_sif_pc=False,
-            )
-            self.sif_pc_ = self._first_pc(sif_vectors)
-        else:
-            self.sif_pc_ = None
         return self
 
     def transform(self, texts: Iterable[str]):
         tokenized = [tokenize_words(clean_text(text)) for text in texts]
-        if self.strategy == "sif":
-            return self._documents_to_matrix(tokenized, remove_sif_pc=True)
-        return self._documents_to_matrix(tokenized, remove_sif_pc=False)
+        return self._documents_to_matrix(tokenized)
 
     def _compute_idf(self, tokenized: list[list[str]]) -> dict[str, float]:
         n_docs = len(tokenized)
@@ -327,17 +245,9 @@ class StaticEmbeddingVectorizer(BaseEstimator, TransformerMixin):
         embeddings[token] = vector
         return True
 
-    def _documents_to_matrix(
-        self,
-        tokenized: list[list[str]],
-        remove_sif_pc: bool,
-    ) -> np.ndarray:
+    def _documents_to_matrix(self, tokenized: list[list[str]]) -> np.ndarray:
         rows = [self._document_vector(tokens) for tokens in tokenized]
-        matrix = np.vstack(rows).astype(np.float32)
-        if remove_sif_pc and self.sif_pc_ is not None:
-            pc = self.sif_pc_.reshape(1, -1)
-            matrix = matrix - matrix.dot(pc.T) * pc
-        return matrix
+        return np.vstack(rows).astype(np.float32)
 
     def _document_vector(self, tokens: list[str]) -> np.ndarray:
         vectors = []
@@ -364,19 +274,7 @@ class StaticEmbeddingVectorizer(BaseEstimator, TransformerMixin):
     def _token_weight(self, token: str) -> float:
         if self.strategy == "tfidf_weighted":
             return self.idf_.get(token, 1.0)
-        if self.strategy == "sif":
-            probability = self.term_counts_.get(token, 0) / max(1, self.total_tokens_)
-            return self.sif_a / (self.sif_a + probability)
         return 1.0
-
-    @staticmethod
-    def _first_pc(matrix: np.ndarray) -> np.ndarray | None:
-        nonzero = matrix[np.linalg.norm(matrix, axis=1) > 0]
-        if len(nonzero) < 2:
-            return None
-        centered = nonzero - nonzero.mean(axis=0, keepdims=True)
-        _, _, vt = np.linalg.svd(centered, full_matrices=False)
-        return vt[0].astype(np.float32)
 
 
 def embedding_feature_specs(args: argparse.Namespace) -> list[tuple[str, str, str, BaseEstimator]]:
@@ -384,9 +282,8 @@ def embedding_feature_specs(args: argparse.Namespace) -> list[tuple[str, str, st
     paths = {
         "glove": args.glove_path,
         "fasttext": args.fasttext_path,
-        "word2vec": args.word2vec_path,
     }
-    strategies = ["average", "tfidf_weighted", "mean_max", "sif"]
+    strategies = ["average", "tfidf_weighted", "mean_max"]
     for family, path in paths.items():
         if not path:
             continue
@@ -403,7 +300,6 @@ def embedding_feature_specs(args: argparse.Namespace) -> list[tuple[str, str, st
                                 StaticEmbeddingVectorizer(
                                     embedding_path=path,
                                     strategy=strategy,
-                                    max_sif_documents=args.max_sif_documents,
                                 ),
                             ),
                             ("normalize", Normalizer(norm="l2")),
@@ -500,11 +396,36 @@ def run_sparse_experiments(
     specs = sparse_feature_specs(max_features)
 
     for family, variant, description, vectorizer in specs:
+        feature_extraction_job = f"{family}__{variant}__features"
+        progress.start(feature_extraction_job)
+        try:
+            start = time.perf_counter()
+            fitted_vectorizer = clone(vectorizer)
+            x_train_sparse = fitted_vectorizer.fit_transform(x_train)
+            x_val_sparse = fitted_vectorizer.transform(x_val)
+            feature_seconds = time.perf_counter() - start
+            notes = (
+                f"feature_seconds={feature_seconds:.2f}; "
+                f"train_shape={x_train_sparse.shape}; "
+                f"val_shape={x_val_sparse.shape}; "
+                f"train_nnz={getattr(x_train_sparse, 'nnz', 0)}"
+            )
+        except Exception as exc:
+            failed = ExperimentResult(
+                experiment=feature_extraction_job,
+                family=family,
+                representation=description,
+                variant=variant,
+                classifier="feature_extraction",
+                status="failed",
+                notes=f"{type(exc).__name__}: {exc}",
+            )
+            results.append(failed)
+            print_result(failed)
+            continue
+
         for classifier_name, classifier in classifiers.items():
             experiment = f"{family}__{variant}__{classifier_name}"
-            estimator = Pipeline(
-                [("features", clone(vectorizer)), ("classifier", clone(classifier))]
-            )
             results.append(
                 run_estimator(
                     experiment=experiment,
@@ -512,11 +433,12 @@ def run_sparse_experiments(
                     representation=description,
                     variant=variant,
                     classifier_name=classifier_name,
-                    estimator=estimator,
-                    x_train=x_train,
+                    estimator=clone(classifier),
+                    x_train=x_train_sparse,
                     y_train=y_train,
-                    x_val=x_val,
+                    x_val=x_val_sparse,
                     y_val=y_val,
+                    notes=notes,
                     progress=progress,
                 )
             )
@@ -603,9 +525,8 @@ def print_result(result: ExperimentResult) -> None:
 def count_jobs(args: argparse.Namespace) -> int:
     total = 1
     if args.mode in {"sparse", "all"}:
-        total += len(sparse_feature_specs(args.max_features)) * len(
-            make_sparse_classifiers(max_iter=args.max_iter)
-        )
+        sparse_specs = sparse_feature_specs(args.max_features)
+        total += len(sparse_specs) * (1 + len(make_sparse_classifiers(max_iter=args.max_iter)))
     if args.mode in {"embeddings", "all"}:
         total += len(embedding_feature_specs(args)) * (
             1 + len(make_dense_classifiers(max_iter=args.max_iter))
@@ -658,8 +579,6 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--glove-path", type=str, default=None)
     parser.add_argument("--fasttext-path", type=str, default=None)
-    parser.add_argument("--word2vec-path", type=str, default=None)
-    parser.add_argument("--max-sif-documents", type=int, default=50000)
     return parser.parse_args()
 
 
