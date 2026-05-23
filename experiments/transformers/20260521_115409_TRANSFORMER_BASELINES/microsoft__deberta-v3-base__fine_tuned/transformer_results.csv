@@ -1,2 +1,0 @@
-experiment,family,model,variant,status,best_epoch,best_epoch_train_loss,best_epoch_val_loss,train_seconds,eval_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
-transformer__microsoft__deberta-v3-base__fine_tuned,transformer,microsoft/deberta-v3-base,fine_tuned,ok,1.0,1.6147949735449736,nan,4930.337911971001,63.41946488301619,0.2,0.06666666666666667,2.0,0.5,0.0,Final eval score=0.50000

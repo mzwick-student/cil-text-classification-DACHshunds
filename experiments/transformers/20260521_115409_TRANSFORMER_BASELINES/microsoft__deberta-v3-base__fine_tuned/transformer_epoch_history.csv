@@ -1,4 +1,0 @@
-experiment,epoch,train_loss,val_loss,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa
-transformer__microsoft__deberta-v3-base__fine_tuned,1.0,1.6147949735449736,nan,0.2,0.06666666666666667,2.0,0.5,0.0
-transformer__microsoft__deberta-v3-base__fine_tuned,2.0,0.0,nan,0.2,0.06666666666666667,2.0,0.5,0.0
-transformer__microsoft__deberta-v3-base__fine_tuned,3.0,0.0,nan,0.2,0.06666666666666667,2.0,0.5,0.0
