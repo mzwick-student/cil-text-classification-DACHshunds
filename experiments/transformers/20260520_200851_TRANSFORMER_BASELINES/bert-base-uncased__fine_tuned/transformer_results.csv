@@ -1,0 +1,2 @@
+experiment,family,model,variant,status,best_epoch,best_epoch_train_loss,best_epoch_val_loss,train_seconds,eval_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
+transformer__bert-base-uncased__fine_tuned,transformer,bert-base-uncased,fine_tuned,ok,2.0,0.7841832699514991,0.8301405310630798,3792.3261623109865,40.07581247302005,0.6407936507936508,0.6375197997949973,0.4123015873015873,0.8969246031746032,0.8692697535130154,Final eval score=0.89685
