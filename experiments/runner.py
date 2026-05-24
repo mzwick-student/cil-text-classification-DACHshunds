@@ -29,56 +29,58 @@ class ExperimentRunner:
     def run(self) -> dict:
         self._set_seed()
         self._setup_wandb()
-        self._write_json("config.json", config_to_dict(self.config) | {"seed": self.seed})
-
-        started = time.time()
-        train_df, val_df = self._load_split()
-        tokenizer, train_ds, val_ds = self._tokenize(train_df, val_df)
-        class_prior = self._class_prior(train_df)
-        model = SentimentModel.from_config(self.config.model, self.config.objective, class_prior)
-
-        trainer = SentimentTrainer(
-            method=self.config.trainer,
-            model=model,
-            args=self._training_args(),
-            train_dataset=train_ds,
-            eval_dataset=val_ds,
-            compute_metrics=build_compute_metrics(self.config.objective.name, self.config.objective.decoder),
-            #tokenizer=tokenizer,
-        )
-
-        train_result = trainer.train()
-        train_metrics = trainer.evaluate(train_ds, metric_key_prefix="train")
-        val_metrics = trainer.evaluate(val_ds, metric_key_prefix="val")
-
-        trainer.save_model(str(self.output_dir / "final_model"))
-        tokenizer.save_pretrained(str(self.output_dir / "final_model"))
-        val_prediction_metrics = self._save_val_error_dataframe(trainer, val_ds, val_df)
-        metrics = {
-            "seed": self.seed,
-            "runtime_seconds": round(time.time() - started, 3),
-            "train_loss": float(train_metrics["train_loss"]),
-            "training_loss": float(train_result.training_loss),
-            "val_loss": float(val_metrics["val_loss"]),
-        }
-        metrics.update(self._prefixed_numeric_metrics("train", train_metrics))
-        metrics.update(self._prefixed_numeric_metrics("val", val_metrics))
-        metrics.update(val_prediction_metrics)
-        trainer.log({f"final/{key}": value for key, value in metrics.items()})
-        self._write_json("metrics.json", metrics)
-
-        if self.config.model.hub_model_id:
-            trainer.push_to_hub()
-            self._push_huggingface_report()
-        
-        # Finish the W&B run so the next seed starts a fresh run
         try:
-            import wandb
-            wandb.finish()
-        except ImportError:
-            pass
-        
-        return metrics
+            self._write_json("config.json", config_to_dict(self.config) | {"seed": self.seed})
+
+            started = time.time()
+            train_df, val_df = self._load_split()
+            tokenizer, train_ds, val_ds = self._tokenize(train_df, val_df)
+            class_prior = self._class_prior(train_df)
+            model = SentimentModel.from_config(self.config.model, self.config.objective, class_prior)
+
+            trainer = SentimentTrainer(
+                method=self.config.trainer,
+                model=model,
+                args=self._training_args(),
+                train_dataset=train_ds,
+                eval_dataset=val_ds,
+                compute_metrics=build_compute_metrics(self.config.objective.name, self.config.objective.decoder),
+                #tokenizer=tokenizer,
+            )
+
+            train_result = trainer.train()
+            train_metrics = trainer.evaluate(train_ds, metric_key_prefix="train")
+            val_metrics = trainer.evaluate(val_ds, metric_key_prefix="val")
+
+            trainer.save_model(str(self.output_dir / "final_model"))
+            tokenizer.save_pretrained(str(self.output_dir / "final_model"))
+            val_prediction_metrics = self._save_val_error_dataframe(trainer, val_ds, val_df)
+            metrics = {
+                "seed": self.seed,
+                "runtime_seconds": round(time.time() - started, 3),
+                "train_loss": float(train_metrics["train_loss"]),
+                "training_loss": float(train_result.training_loss),
+                "val_loss": float(val_metrics["val_loss"]),
+            }
+            metrics.update(self._prefixed_numeric_metrics("train", train_metrics))
+            metrics.update(self._prefixed_numeric_metrics("val", val_metrics))
+            metrics.update(val_prediction_metrics)
+            trainer.log({f"final/{key}": value for key, value in metrics.items()})
+            self._write_json("metrics.json", metrics)
+
+            if self.config.model.hub_model_id:
+                trainer.push_to_hub()
+                self._push_huggingface_report()
+
+            return metrics
+        finally:
+            # Finish the W&B run so the next seed starts a fresh run, even if this seed fails.
+            try:
+                import wandb
+
+                wandb.finish()
+            except ImportError:
+                pass
 
     def _load_split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         data = self.config.data

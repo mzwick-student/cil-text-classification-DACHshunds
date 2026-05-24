@@ -1,12 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=cil-ord-ce
 #SBATCH --account=cil_jobs
-#SBATCH --output=slurm-%A.out
-#SBATCH --error=slurm-%A.err
-#SBATCH --time=24:00:00
+#SBATCH --output=slurm-%A_%a.out
+#SBATCH --error=slurm-%A_%a.err
+#SBATCH --time=6:00:00
 #SBATCH --gpus=5060ti:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
 #SBATCH --export=ALL
 
 set -euo pipefail
