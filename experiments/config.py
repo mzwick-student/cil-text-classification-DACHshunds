@@ -43,6 +43,18 @@ class TrainingConfig:
 
 
 @dataclass
+class ObjectiveConfig:
+    name: str = "regression"
+    decoder: str = "round"
+    n_classes: int = 5
+    loss: str = "huber"
+    coral_num_thresholds: int = 4
+    tau: list[float] = field(default_factory=lambda: [0.60, 0.60, 0.60, 0.60, 0.60])
+    rho: list[float] = field(default_factory=lambda: [0.05, 0.05, 0.05, 0.05, 0.05])
+    prior_mode: str = "empirical"
+
+
+@dataclass
 class LoggingConfig:
     wandb_project: str = "cil-sentiment"
     wandb_entity: str | None = None
@@ -54,6 +66,7 @@ class ExperimentConfig:
     seeds: list[int] = field(default_factory=lambda: [42])
     trainer: str = "default"
     model: ModelConfig = field(default_factory=ModelConfig)
+    objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)
     data: DataConfig = field(default_factory=DataConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -69,6 +82,7 @@ def load_config(path: str | Path, overrides: dict[str, Any] | None = None) -> Ex
         seeds=raw.get("seeds", [raw.get("seed", 42)]),
         trainer=raw.get("trainer", "default"),
         model=ModelConfig(**raw.get("model", {})),
+        objective=ObjectiveConfig(**raw.get("objective", {})),
         data=DataConfig(**raw.get("data", {})),
         training=TrainingConfig(**raw.get("training", {})),
         logging=LoggingConfig(**raw.get("logging", {})),

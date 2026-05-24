@@ -1,0 +1,36 @@
+{
+  "name": "ordinal_soft_label_ce_xlmr",
+  "seeds": [1, 2, 3],
+  "trainer": "default",
+  "model": {
+    "kind": "lora_bert",
+    "name": "xlm-roberta-base",
+    "geometry": "default",
+    "lora_r": 64,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "hub_model_id": "MichaHenh/cil-ordinal-soft-label-ce-seed{seed}"
+  },
+  "objective": {
+    "name": "ordinal_soft_ce",
+    "decoder": "bayes_mae",
+    "tau": [0.60, 0.60, 0.60, 0.60, 0.60],
+    "rho": [0.05, 0.05, 0.05, 0.05, 0.05],
+    "prior_mode": "empirical"
+  },
+  "training": {
+    "batch_size": 64,
+    "eval_batch_size": 1024,
+    "learning_rate": 1.5e-4,
+    "scheduler": "cosine",
+    "epochs": 3,
+    "logging_steps": 500,
+    "eval_steps": 500
+  },
+  "data": {
+    "train": "data/train_lang.csv"
+  },
+  "logging": {
+    "wandb_project": "cil-sentiment"
+  }
+}

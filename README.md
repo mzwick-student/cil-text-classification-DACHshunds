@@ -70,6 +70,8 @@ Outputs are written to `outputs/<run-name>/`:
 - `config.json`: exact run config
 - `metrics.json`: final train/val loss, MAE, and rounded MAE
 - `final_model/`: saved final model
+- `decoder_config.json`: objective/decoder metadata, including tuned thresholds when used
+- `val_error_dataframe.csv`: validation rows with `id`, `sentence`, `lang`, `label`, `pred`, `error`, and available raw/probability columns
 
 Minimal config example:
 
@@ -108,3 +110,24 @@ Minimal config example:
 Allowed values are still available when needed: `trainer` can be `default`,
 `pcgrad`, or `gradvac`; `model.kind` can be `bert` or `lora_bert`;
 `model.geometry` can be `default`, `circular`, or `mobius`.
+
+## Ordinal objective experiments
+
+The Slurm-ready ordinal experiments all use `xlm-roberta-base` LoRA and run seeds `[1, 2, 3]`:
+
+- `configs/ordinal_ce_xlmr.json`: CE classifier, reporting both posterior argmax/MAP and Bayes-MAE decoding
+- `configs/ordinal_regression_xlmr.json`: regression, reporting both rounding and validation-tuned MAE threshold decoding
+- `configs/ordinal_coral_xlmr.json`: CORAL-style ordinal regression
+- `configs/ordinal_soft_label_ce_xlmr.json`: ordinal soft-label CE with `tau=[0.60]*5`, `rho=[0.05]*5`, empirical prior, decoded with Bayes-MAE
+
+Submit one experiment:
+
+```bash
+sbatch slurm/run_ordinal_ce.sbatch
+```
+
+Submit all ordinal objective experiments:
+
+```bash
+slurm/submit_all_ordinal_objective.sh
+```

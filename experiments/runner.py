@@ -14,6 +14,7 @@ from transformers import AutoTokenizer, TrainingArguments
 
 from .config import ExperimentConfig, config_to_dict
 from .models import SentimentModel
+from .ordinal import build_compute_metrics, decode_predictions
 from .trainers import SentimentTrainer
 
 
@@ -33,7 +34,8 @@ class ExperimentRunner:
         started = time.time()
         train_df, val_df = self._load_split()
         tokenizer, train_ds, val_ds = self._tokenize(train_df, val_df)
-        model = SentimentModel.from_config(self.config.model)
+        class_prior = self._class_prior(train_df)
+        model = SentimentModel.from_config(self.config.model, self.config.objective, class_prior)
 
         trainer = SentimentTrainer(
             method=self.config.trainer,
@@ -41,7 +43,7 @@ class ExperimentRunner:
             args=self._training_args(),
             train_dataset=train_ds,
             eval_dataset=val_ds,
-            compute_metrics=SentimentTrainer.metrics,
+            compute_metrics=build_compute_metrics(self.config.objective.name, self.config.objective.decoder),
             #tokenizer=tokenizer,
         )
 
@@ -51,22 +53,23 @@ class ExperimentRunner:
 
         trainer.save_model(str(self.output_dir / "final_model"))
         tokenizer.save_pretrained(str(self.output_dir / "final_model"))
-        if self.config.model.hub_model_id:
-            trainer.push_to_hub()
-
+        val_prediction_metrics = self._save_val_error_dataframe(trainer, val_ds, val_df)
         metrics = {
             "seed": self.seed,
             "runtime_seconds": round(time.time() - started, 3),
             "train_loss": float(train_metrics["train_loss"]),
             "training_loss": float(train_result.training_loss),
-            "train_mae": float(train_metrics["train_mae"]),
-            "train_rounded_mae": float(train_metrics["train_rounded_mae"]),
             "val_loss": float(val_metrics["val_loss"]),
-            "val_mae": float(val_metrics["val_mae"]),
-            "val_rounded_mae": float(val_metrics["val_rounded_mae"]),
         }
+        metrics.update(self._prefixed_numeric_metrics("train", train_metrics))
+        metrics.update(self._prefixed_numeric_metrics("val", val_metrics))
+        metrics.update(val_prediction_metrics)
         trainer.log({f"final/{key}": value for key, value in metrics.items()})
         self._write_json("metrics.json", metrics)
+
+        if self.config.model.hub_model_id:
+            trainer.push_to_hub()
+            self._push_huggingface_report()
         
         # Finish the W&B run so the next seed starts a fresh run
         try:
@@ -92,6 +95,20 @@ class ExperimentRunner:
         )
 
         return train_df.reset_index(drop=True), val_df.reset_index(drop=True)
+
+    def _class_prior(self, train_df: pd.DataFrame) -> list[float]:
+        objective = self.config.objective
+        if objective.prior_mode == "uniform":
+            return [1.0 / objective.n_classes] * objective.n_classes
+        counts = (
+            train_df[self.config.data.label_column]
+            .value_counts()
+            .reindex(range(objective.n_classes), fill_value=0)
+            .sort_index()
+            .to_numpy(dtype=np.float64)
+        )
+        counts = counts + 1e-12
+        return (counts / counts.sum()).tolist()
 
     def _tokenize(self, train_df: pd.DataFrame, val_df: pd.DataFrame):
         data = self.config.data
@@ -163,7 +180,11 @@ class ExperimentRunner:
 
     def _run_name(self) -> str:
         model = self.config.model
-        return f"{self.config.name}_seed{self.seed}_{model.kind}_{model.geometry}_{self.config.trainer}"
+        objective = self.config.objective
+        return (
+            f"{self.config.name}_seed{self.seed}_{model.kind}_{model.geometry}_"
+            f"{objective.name}_{objective.decoder}_{self.config.trainer}"
+        )
 
     def _setup_wandb(self) -> None:
         os.environ.setdefault("WANDB_PROJECT", self.config.logging.wandb_project)
@@ -189,6 +210,65 @@ class ExperimentRunner:
     def _write_json(self, name: str, payload: dict) -> None:
         with (self.output_dir / name).open("w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, sort_keys=True)
+
+    @staticmethod
+    def _prefixed_numeric_metrics(prefix: str, metrics: dict) -> dict[str, float]:
+        result = {}
+        for key, value in metrics.items():
+            if key == f"{prefix}_loss":
+                continue
+            try:
+                result[key] = float(value)
+            except (TypeError, ValueError):
+                continue
+        return result
+
+    def _save_val_error_dataframe(self, trainer: SentimentTrainer, val_ds, val_df: pd.DataFrame) -> dict[str, float]:
+        prediction = trainer.predict(val_ds)
+        bundle = decode_predictions(
+            self.config.objective.name,
+            prediction.predictions,
+            prediction.label_ids,
+            self.config.objective.decoder,
+        )
+        out_df = val_df.reset_index(drop=True).copy()
+        out_df["pred"] = bundle.primary.astype(int)
+        out_df["error"] = np.abs(out_df[self.config.data.label_column].to_numpy(dtype=int) - out_df["pred"].to_numpy(dtype=int))
+        for name, values in bundle.columns.items():
+            out_df[name] = values
+        out_df.to_csv(self.output_dir / "val_error_dataframe.csv", index=False)
+
+        decoder_payload = {
+            "objective": self.config.objective.name,
+            "decoder": self.config.objective.decoder,
+            "tau": self.config.objective.tau,
+            "rho": self.config.objective.rho,
+            "artifacts": bundle.artifacts,
+        }
+        self._write_json("decoder_config.json", decoder_payload)
+        with (self.output_dir / "final_model" / "decoder_config.json").open("w", encoding="utf-8") as f:
+            json.dump(decoder_payload, f, indent=2, sort_keys=True)
+
+        metrics = {f"val_prediction_{key}": float(value) for key, value in bundle.metrics.items()}
+        metrics["val_prediction_primary_mae"] = float(out_df["error"].mean())
+        return metrics
+
+    def _push_huggingface_report(self) -> None:
+        from huggingface_hub import HfApi
+
+        repo_id = self._hub_model_id()
+        if repo_id is None:
+            return
+
+        api = HfApi()
+        for filename in ["metrics.json", "decoder_config.json", "val_error_dataframe.csv"]:
+            api.upload_file(
+                path_or_fileobj=str(self.output_dir / filename),
+                path_in_repo=filename,
+                repo_id=repo_id,
+                repo_type="model",
+                commit_message=f"Add {filename} for {self.run_name}",
+            )
 
 
 def run_experiment(config: ExperimentConfig, seed: int) -> dict:

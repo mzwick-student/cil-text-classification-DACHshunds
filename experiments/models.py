@@ -5,17 +5,51 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoConfig, XLMRobertaModel, XLMRobertaPreTrainedModel
 
-from .config import ModelConfig
+from .config import ModelConfig, ObjectiveConfig
+from .ordinal import ordinal_soft_targets
+
+
+def make_mlp(hidden: int, out_dim: int) -> nn.Sequential:
+    return nn.Sequential(
+        nn.Linear(hidden, hidden // 2),
+        nn.GELU(),
+        nn.Dropout(0.1),
+        nn.Linear(hidden // 2, hidden // 4),
+        nn.GELU(),
+        nn.Linear(hidden // 4, out_dim),
+    )
+
+
+class CoralHead(nn.Module):
+    def __init__(self, hidden: int, n_thresholds: int):
+        super().__init__()
+        self.score = make_mlp(hidden, 1)
+        self.thresholds = nn.Parameter(torch.arange(n_thresholds).float())
+
+    def forward(self, pooled):
+        return self.score(pooled) - torch.sort(self.thresholds).values
 
 
 class SentimentModel(XLMRobertaPreTrainedModel):
-    def __init__(self, config, geometry: str = "default"):
+    def __init__(
+        self,
+        config,
+        geometry: str = "default",
+        objective: ObjectiveConfig | None = None,
+        class_prior: list[float] | None = None,
+    ):
         super().__init__(config)
         self.geometry = geometry
+        self.objective = objective or ObjectiveConfig()
+        self.class_prior = class_prior or [1.0 / self.objective.n_classes] * self.objective.n_classes
         self.roberta = XLMRobertaModel(config)
         hidden = config.hidden_size
 
-        if geometry == "mobius":
+        if self.objective.name in {"classification", "ordinal_soft_ce"}:
+            self.classifier = self._mlp(hidden, self.objective.n_classes)
+        elif self.objective.name == "coral":
+            self.coral_head = CoralHead(hidden, self.objective.coral_num_thresholds)
+        elif geometry == "mobius":
             self.intensity_head = self._mlp(hidden, 1)
             self.sarcasm_head = self._mlp(hidden, 1)
             self.sarcasm_head[-1].bias.data.fill_(-3.0)
@@ -28,28 +62,37 @@ class SentimentModel(XLMRobertaPreTrainedModel):
 
     @staticmethod
     def _mlp(hidden: int, out_dim: int) -> nn.Sequential:
-        return nn.Sequential(
-            nn.Linear(hidden, hidden // 2),
-            nn.GELU(),
-            nn.Dropout(0.1),
-            nn.Linear(hidden // 2, hidden // 4),
-            nn.GELU(),
-            nn.Linear(hidden // 4, out_dim),
-        )
+        return make_mlp(hidden, out_dim)
 
     @classmethod
-    def from_config(cls, model_config: ModelConfig):
+    def from_config(
+        cls,
+        model_config: ModelConfig,
+        objective: ObjectiveConfig | None = None,
+        class_prior: list[float] | None = None,
+    ):
+        objective = objective or ObjectiveConfig()
         config = AutoConfig.from_pretrained(model_config.name)
+        config.num_labels = objective.n_classes
         model = cls.from_pretrained(
             model_config.name,
             config=config,
             geometry=model_config.geometry,
+            objective=objective,
+            class_prior=class_prior,
         )
 
         if model_config.kind == "lora_bert":
             from peft import LoraConfig, get_peft_model
 
-            modules_to_save = ["intensity_head", "sarcasm_head"] if model_config.geometry == "mobius" else ["regressor"]
+            if objective.name in {"classification", "ordinal_soft_ce"}:
+                modules_to_save = ["classifier"]
+            elif objective.name == "coral":
+                modules_to_save = ["coral_head"]
+            elif model_config.geometry == "mobius":
+                modules_to_save = ["intensity_head", "sarcasm_head"]
+            else:
+                modules_to_save = ["regressor"]
             lora_config = LoraConfig(
                 r=model_config.lora_r,
                 lora_alpha=model_config.lora_alpha,
@@ -71,10 +114,41 @@ class SentimentModel(XLMRobertaPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss = self.loss_fct(logits.view(-1), labels.float().view(-1))
+            loss = self._loss(logits, labels)
         return {"loss": loss, "logits": logits}
 
+    def _loss(self, logits, labels):
+        labels = labels.view(-1)
+        if self.objective.name == "classification":
+            return F.cross_entropy(logits, labels.long())
+        if self.objective.name == "ordinal_soft_ce":
+            targets = ordinal_soft_targets(
+                labels,
+                tau_by_label=self.objective.tau,
+                rho_by_label=self.objective.rho,
+                prior=self.class_prior,
+                n_classes=self.objective.n_classes,
+            ).to(logits.dtype)
+            return -(targets * F.log_softmax(logits, dim=-1)).sum(dim=-1).mean()
+        if self.objective.name == "coral":
+            thresholds = torch.arange(
+                self.objective.coral_num_thresholds,
+                device=labels.device,
+                dtype=labels.dtype,
+            )
+            targets = (labels[:, None] > thresholds[None, :]).float()
+            return F.binary_cross_entropy_with_logits(logits, targets)
+        if self.objective.loss == "mse":
+            return F.mse_loss(logits.view(-1), labels.float())
+        return self.loss_fct(logits.view(-1), labels.float())
+
     def _predict(self, pooled):
+        if self.objective.name in {"classification", "ordinal_soft_ce"}:
+            return self.classifier(pooled)
+
+        if self.objective.name == "coral":
+            return self.coral_head(pooled)
+
         if self.geometry == "default":
             return 4.0 * torch.sigmoid(self.regressor(pooled))
 
