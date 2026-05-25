@@ -14,7 +14,7 @@
   "objective": {
     "name": "ordinal_soft_ce",
     "decoder": "bayes_mae",
-    "tau": [0.60, 0.60, 0.60, 0.60, 0.60],
+    "tau": [0.80, 0.70, 0.60, 0.70, 0.80],
     "rho": [0.05, 0.05, 0.05, 0.05, 0.05],
     "prior_mode": "empirical"
   },
