@@ -9,12 +9,12 @@ from pathlib import Path
 from datasets import Dataset, Value
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from transformers import AutoTokenizer, TrainingArguments
 
 from .config import ExperimentConfig, config_to_dict
 from .models import SentimentModel
-from .ordinal import build_compute_metrics, decode_predictions
+from .ordinal import bayes_mae_decode, build_compute_metrics, decode_predictions, softmax_np
 from .trainers import SentimentTrainer
 
 
@@ -25,10 +25,12 @@ class ExperimentRunner:
         self.run_name = self._run_name()
         self.output_dir = Path(config.output_dir) / self.run_name
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.extra_metrics: dict[str, float] = {}
 
     def run(self) -> dict:
         self._set_seed()
         self._setup_wandb()
+        wandb_exit_code = 0
         try:
             self._write_json("config.json", config_to_dict(self.config) | {"seed": self.seed})
 
@@ -65,6 +67,7 @@ class ExperimentRunner:
             metrics.update(self._prefixed_numeric_metrics("train", train_metrics))
             metrics.update(self._prefixed_numeric_metrics("val", val_metrics))
             metrics.update(val_prediction_metrics)
+            metrics.update(self.extra_metrics)
             trainer.log({f"final/{key}": value for key, value in metrics.items()})
             self._write_json("metrics.json", metrics)
 
@@ -73,14 +76,11 @@ class ExperimentRunner:
                 self._push_huggingface_report()
 
             return metrics
+        except Exception:
+            wandb_exit_code = 1
+            raise
         finally:
-            # Finish the W&B run so the next seed starts a fresh run, even if this seed fails.
-            try:
-                import wandb
-
-                wandb.finish()
-            except ImportError:
-                pass
+            self._finish_wandb(wandb_exit_code)
 
     def _load_split(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         data = self.config.data
@@ -113,9 +113,16 @@ class ExperimentRunner:
         return (counts / counts.sum()).tolist()
 
     def _tokenize(self, train_df: pd.DataFrame, val_df: pd.DataFrame):
-        data = self.config.data
         tokenizer = AutoTokenizer.from_pretrained(self.config.model.name)
+        if self.config.noise_weighting.enabled:
+            train_df = self._add_noise_weights(train_df, tokenizer)
 
+        train_ds = self._to_dataset(train_df, tokenizer)
+        val_ds = self._to_dataset(val_df, tokenizer)
+        return tokenizer, train_ds, val_ds
+
+    def _to_dataset(self, frame: pd.DataFrame, tokenizer):
+        data = self.config.data
         def preprocess(batch):
             tokenized = tokenizer(
                 batch[data.text_column],
@@ -128,21 +135,131 @@ class ExperimentRunner:
                 tokenized["lang"] = [
                     0 if lang == "eng_Latn" else 1 for lang in batch[data.lang_column]
                 ]
+            if "sample_weight" in batch:
+                tokenized["sample_weight"] = [float(weight) for weight in batch["sample_weight"]]
             return tokenized
 
-        train_ds = Dataset.from_pandas(train_df, preserve_index=False)
-        val_ds = Dataset.from_pandas(val_df, preserve_index=False)
-        remove_columns = list(train_df.columns)
-        train_ds = train_ds.map(preprocess, batched=True, remove_columns=remove_columns)
-        val_ds = val_ds.map(preprocess, batched=True, remove_columns=remove_columns)
-        train_ds = train_ds.cast_column("labels", Value("float32"))
-        val_ds = val_ds.cast_column("labels", Value("float32"))
-        if "lang" in train_ds.column_names:
-            train_ds = train_ds.cast_column("lang", Value("int64"))
-            val_ds = val_ds.cast_column("lang", Value("int64"))
-        train_ds.set_format("torch")
-        val_ds.set_format("torch")
-        return tokenizer, train_ds, val_ds
+        ds = Dataset.from_pandas(frame, preserve_index=False)
+        ds = ds.map(preprocess, batched=True, remove_columns=list(frame.columns))
+        ds = ds.cast_column("labels", Value("float32"))
+        if "lang" in ds.column_names:
+            ds = ds.cast_column("lang", Value("int64"))
+        if "sample_weight" in ds.column_names:
+            ds = ds.cast_column("sample_weight", Value("float32"))
+        ds.set_format("torch")
+        return ds
+
+    def _add_noise_weights(self, train_df: pd.DataFrame, tokenizer) -> pd.DataFrame:
+        if self.config.objective.name != "classification":
+            raise ValueError("noise_weighting currently expects objective.name='classification'")
+
+        noise = self.config.noise_weighting
+        data = self.config.data
+        labels = train_df[data.label_column].to_numpy(dtype=int)
+        oof_probs = np.full((len(train_df), self.config.objective.n_classes), np.nan, dtype=np.float32)
+        oof_fold = np.full(len(train_df), -1, dtype=int)
+
+        splitter = StratifiedKFold(n_splits=noise.oof_n_splits, shuffle=True, random_state=self.seed)
+        for fold, (fit_idx, oof_idx) in enumerate(splitter.split(train_df[data.text_column], labels)):
+            print(
+                f"Noise OOF fold {fold}: fit={len(fit_idx)} oof={len(oof_idx)} epochs={noise.oof_epochs}",
+                flush=True,
+            )
+            fold_train_ds = self._to_dataset(train_df.iloc[fit_idx].reset_index(drop=True), tokenizer)
+            fold_oof_ds = self._to_dataset(train_df.iloc[oof_idx].reset_index(drop=True), tokenizer)
+            class_prior = self._class_prior(train_df.iloc[fit_idx])
+            model = SentimentModel.from_config(self.config.model, self.config.objective, class_prior)
+            trainer = SentimentTrainer(
+                method="default",
+                model=model,
+                args=self._pilot_training_args(fold),
+                train_dataset=fold_train_ds,
+                compute_metrics=build_compute_metrics(self.config.objective.name, self.config.objective.decoder),
+            )
+            trainer.train()
+            oof_probs[oof_idx] = softmax_np(trainer.predict(fold_oof_ds).predictions).astype(np.float32)
+            oof_fold[oof_idx] = fold
+
+            del trainer, model, fold_train_ds, fold_oof_ds
+            try:
+                import gc
+                import torch
+
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except ImportError:
+                pass
+
+        available_oof = np.isfinite(oof_probs).all(axis=1)
+        oof_map_preds = np.full(len(train_df), -1, dtype=int)
+        oof_bayes_preds = np.full(len(train_df), -1, dtype=int)
+        oof_abs_error = np.full(len(train_df), np.nan, dtype=np.float32)
+        oof_ce_loss = np.full(len(train_df), np.nan, dtype=np.float32)
+        covered_idx = np.flatnonzero(available_oof)
+
+        oof_map_preds[available_oof] = oof_probs[available_oof].argmax(axis=1).astype(int)
+        oof_bayes_preds[available_oof] = bayes_mae_decode(oof_probs[available_oof])
+        oof_abs_error[available_oof] = np.abs(oof_bayes_preds[available_oof] - labels[available_oof])
+        true_probs = np.clip(oof_probs[available_oof, labels[available_oof]], 1e-12, 1.0)
+        oof_ce_loss[available_oof] = -np.log(true_probs)
+
+        weights = np.ones(len(train_df), dtype=np.float32)
+        noisy = np.zeros(len(train_df), dtype=bool)
+        n_noisy = max(1, int(np.ceil(len(covered_idx) * noise.q_percent / 100.0)))
+        order = np.lexsort((-oof_ce_loss[covered_idx], -oof_abs_error[covered_idx]))
+        noisy_idx = covered_idx[order[:n_noisy]]
+        noisy[noisy_idx] = True
+        weights[noisy_idx] = noise.noisy_weight
+
+        diagnostics = train_df.reset_index(drop=True).copy()
+        diagnostics["oof_fold"] = oof_fold
+        diagnostics["oof_map_pred"] = oof_map_preds
+        diagnostics["oof_bayes_pred"] = oof_bayes_preds
+        diagnostics["oof_abs_error"] = oof_abs_error
+        diagnostics["oof_ce_loss"] = oof_ce_loss
+        diagnostics["is_noisy"] = noisy
+        diagnostics["sample_weight"] = weights
+        for cls in range(self.config.objective.n_classes):
+            diagnostics[f"oof_p_{cls}"] = oof_probs[:, cls]
+        diagnostics.to_csv(self.output_dir / "oof_diagnostics.csv", index=False)
+
+        summary = {
+            "noise_oof_n_splits": noise.oof_n_splits,
+            "noise_oof_epochs": noise.oof_epochs,
+            "noise_q_percent": noise.q_percent,
+            "noise_noisy_weight": noise.noisy_weight,
+            "noise_oof_covered": int(available_oof.sum()),
+            "noise_n_noisy": int(noisy.sum()),
+            "noise_effective_train_weight": float(weights.sum()),
+            "noise_mean_noisy_abs_error": float(np.nanmean(oof_abs_error[noisy])),
+            "noise_mean_noisy_ce_loss": float(np.nanmean(oof_ce_loss[noisy])),
+        }
+        self.extra_metrics.update(summary)
+        self._write_json("noise_weighting_summary.json", summary)
+
+        weighted_train_df = train_df.reset_index(drop=True).copy()
+        weighted_train_df["sample_weight"] = weights
+        return weighted_train_df
+
+    def _pilot_training_args(self, fold: int) -> TrainingArguments:
+        training = self.config.training
+        return TrainingArguments(
+            output_dir=str(self.output_dir / "oof_checkpoints" / f"fold_{fold}"),
+            per_device_train_batch_size=training.batch_size,
+            per_device_eval_batch_size=training.eval_batch_size,
+            learning_rate=training.learning_rate,
+            lr_scheduler_type=training.scheduler,
+            warmup_steps=training.warmup_steps,
+            num_train_epochs=self.config.noise_weighting.oof_epochs,
+            eval_strategy="no",
+            logging_steps=training.logging_steps,
+            save_strategy="no",
+            fp16=training.fp16,
+            report_to=[],
+            remove_unused_columns=False,
+            seed=self.seed + fold,
+        )
 
     def _training_args(self) -> TrainingArguments:
         training = self.config.training
@@ -192,6 +309,19 @@ class ExperimentRunner:
         os.environ.setdefault("WANDB_PROJECT", self.config.logging.wandb_project)
         if self.config.logging.wandb_entity:
             os.environ.setdefault("WANDB_ENTITY", self.config.logging.wandb_entity)
+
+    def _finish_wandb(self, exit_code: int) -> None:
+        try:
+            import wandb
+        except ImportError:
+            return
+
+        if wandb.run is None:
+            return
+
+        print(f"Finishing W&B run for {self.run_name} with exit_code={exit_code}", flush=True)
+        wandb.finish(exit_code=exit_code)
+        print(f"Finished W&B run for {self.run_name}", flush=True)
 
     def _set_seed(self) -> None:
         os.environ["PYTHONHASHSEED"] = str(self.seed)
@@ -263,7 +393,10 @@ class ExperimentRunner:
             return
 
         api = HfApi()
-        for filename in ["metrics.json", "decoder_config.json", "val_error_dataframe.csv"]:
+        filenames = ["metrics.json", "decoder_config.json", "val_error_dataframe.csv"]
+        if self.config.noise_weighting.enabled:
+            filenames.extend(["noise_weighting_summary.json", "oof_diagnostics.csv"])
+        for filename in filenames:
             api.upload_file(
                 path_or_fileobj=str(self.output_dir / filename),
                 path_in_repo=filename,

@@ -107,20 +107,28 @@ class SentimentModel(XLMRobertaPreTrainedModel):
 
         return model
 
-    def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
+    def forward(self, input_ids=None, attention_mask=None, labels=None, sample_weight=None, **kwargs):
         outputs = self.roberta(input_ids=input_ids, attention_mask=attention_mask)
         pooled = outputs.last_hidden_state[:, 0, :]
         logits = self._predict(pooled)
 
         loss = None
         if labels is not None:
-            loss = self._loss(logits, labels)
+            loss = self._loss(logits, labels, sample_weight)
         return {"loss": loss, "logits": logits}
 
-    def _loss(self, logits, labels):
+    @staticmethod
+    def _weighted_mean(losses, sample_weight):
+        if sample_weight is None:
+            return losses.mean()
+        sample_weight = sample_weight.to(losses.device, dtype=losses.dtype).view(-1)
+        return (losses.view(-1) * sample_weight).sum() / sample_weight.sum().clamp_min(1e-8)
+
+    def _loss(self, logits, labels, sample_weight=None):
         labels = labels.view(-1)
         if self.objective.name == "classification":
-            return F.cross_entropy(logits, labels.long())
+            losses = F.cross_entropy(logits, labels.long(), reduction="none")
+            return self._weighted_mean(losses, sample_weight)
         if self.objective.name == "ordinal_soft_ce":
             targets = ordinal_soft_targets(
                 labels,
@@ -129,7 +137,8 @@ class SentimentModel(XLMRobertaPreTrainedModel):
                 prior=self.class_prior,
                 n_classes=self.objective.n_classes,
             ).to(logits.dtype)
-            return -(targets * F.log_softmax(logits, dim=-1)).sum(dim=-1).mean()
+            losses = -(targets * F.log_softmax(logits, dim=-1)).sum(dim=-1)
+            return self._weighted_mean(losses, sample_weight)
         if self.objective.name == "coral":
             thresholds = torch.arange(
                 self.objective.coral_num_thresholds,
@@ -137,10 +146,13 @@ class SentimentModel(XLMRobertaPreTrainedModel):
                 dtype=labels.dtype,
             )
             targets = (labels[:, None] > thresholds[None, :]).float()
-            return F.binary_cross_entropy_with_logits(logits, targets)
+            losses = F.binary_cross_entropy_with_logits(logits, targets, reduction="none").mean(dim=1)
+            return self._weighted_mean(losses, sample_weight)
         if self.objective.loss == "mse":
-            return F.mse_loss(logits.view(-1), labels.float())
-        return self.loss_fct(logits.view(-1), labels.float())
+            losses = F.mse_loss(logits.view(-1), labels.float(), reduction="none")
+        else:
+            losses = F.huber_loss(logits.view(-1), labels.float(), delta=0.75, reduction="none")
+        return self._weighted_mean(losses, sample_weight)
 
     def _predict(self, pooled):
         if self.objective.name in {"classification", "ordinal_soft_ce"}:

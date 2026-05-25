@@ -55,6 +55,16 @@ class ObjectiveConfig:
 
 
 @dataclass
+class NoiseWeightingConfig:
+    enabled: bool = False
+    oof_n_splits: int = 3
+    oof_epochs: float = 1.0
+    q_percent: float = 5.0
+    noisy_weight: float = 0.5
+    score: str = "bayes_abs_error_then_ce"
+
+
+@dataclass
 class LoggingConfig:
     wandb_project: str = "cil-sentiment"
     wandb_entity: str | None = None
@@ -67,6 +77,7 @@ class ExperimentConfig:
     trainer: str = "default"
     model: ModelConfig = field(default_factory=ModelConfig)
     objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)
+    noise_weighting: NoiseWeightingConfig = field(default_factory=NoiseWeightingConfig)
     data: DataConfig = field(default_factory=DataConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -83,6 +94,7 @@ def load_config(path: str | Path, overrides: dict[str, Any] | None = None) -> Ex
         trainer=raw.get("trainer", "default"),
         model=ModelConfig(**raw.get("model", {})),
         objective=ObjectiveConfig(**raw.get("objective", {})),
+        noise_weighting=NoiseWeightingConfig(**raw.get("noise_weighting", {})),
         data=DataConfig(**raw.get("data", {})),
         training=TrainingConfig(**raw.get("training", {})),
         logging=LoggingConfig(**raw.get("logging", {})),

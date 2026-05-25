@@ -131,3 +131,11 @@ Submit all ordinal objective experiments:
 ```bash
 slurm/submit_all_ordinal_objective.sh
 ```
+
+## Noise weighting experiment
+
+`configs/noise_weight_q5_xlmr.json` runs the XLM-R CE classifier with OOF noise downweighting. For each seed it trains a 3-fold, 1-epoch OOF pilot on the training split, marks the top 5% covered samples by Bayes-MAE absolute error with CE loss as tie-breaker, assigns those samples weight `0.5`, and then runs the final 3-epoch weighted CE training.
+
+```bash
+sbatch slurm/run_noise_weight_q5.sbatch
+```
