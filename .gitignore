@@ -221,3 +221,4 @@ __marimo__/
 data/*bert*.pt
 data/model.bin
 outputs/
+.slurm_tokens
