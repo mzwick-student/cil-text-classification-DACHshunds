@@ -46,10 +46,12 @@ def load_model(config_path: Path, checkpoint: str, device: torch.device):
     return exp_config, model
 
 
-def load_tokenizer(checkpoint: str, fallback_model_name: str):
+def load_tokenizer(tokenizer_name_or_path: str, fallback_model_name: str):
     try:
-        return AutoTokenizer.from_pretrained(checkpoint)
-    except OSError:
+        return AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+    except (OSError, ValueError) as exc:
+        print(f"Could not load tokenizer from {tokenizer_name_or_path}: {exc}")
+        print(f"Falling back to {fallback_model_name}")
         return AutoTokenizer.from_pretrained(fallback_model_name)
 
 
@@ -79,6 +81,11 @@ def main() -> None:
         required=True,
         help="Path or Hub repo for final_model, e.g. outputs/.../final_model.",
     )
+    parser.add_argument(
+        "--tokenizer",
+        default=None,
+        help="Optional tokenizer path/repo. Defaults to --checkpoint, then falls back to the base model.",
+    )
     parser.add_argument("--test", default="data/test.csv", type=Path)
     parser.add_argument("--submission", default="submission.csv", type=Path)
     parser.add_argument("--details", default="test_predictions.csv", type=Path)
@@ -89,7 +96,7 @@ def main() -> None:
 
     device = torch.device(args.device)
     exp_config, model = load_model(args.config, args.checkpoint, device)
-    tokenizer = load_tokenizer(args.checkpoint, exp_config.model.name)
+    tokenizer = load_tokenizer(args.tokenizer or args.checkpoint, exp_config.model.name)
 
     test_df = pd.read_csv(args.test)
     texts = test_df[exp_config.data.text_column].fillna("").astype(str).tolist()
