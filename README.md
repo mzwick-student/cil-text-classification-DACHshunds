@@ -3,7 +3,7 @@
 Classic and neural baselines for the ETH CIL 2026 sentiment classification
 project.
 
-## Main Workflow
+## Main Workflow for Experiment 1
 
 1. Download static embeddings with `load_embeddings.ipynb`.
 2. Run and analyze classic ML baselines with `baselines.ipynb`.
