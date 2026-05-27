@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering
+\small
+\caption{Results of classical ML baselines.}
+\label{tab:classic-baselines-no-variance}
+\begin{tabular}{lrrrr}
+\toprule
+Method family & Logistic Regression & Linear SVM & Ridge Classifier & Complement NB \\
+\midrule
+Count vectorization & 0.535 & 0.646 & 0.782 & 0.580 \\
+TF-IDF word & \textbf{0.505} & \textbf{0.558} & \textbf{0.548} & \textbf{0.572} \\
+TF-IDF character & 0.527 & 0.573 & 0.570 & 0.667 \\
+GloVe embedding & 0.800 & 0.807 & 0.830 & -- \\
+fastText embedding & 0.731 & 0.731 & 0.754 & -- \\
+\bottomrule
+\end{tabular}
+\par\smallskip\footnotesize Metric: Validation MAE. Each cell reports the best variant within the family, averaged across seeds.
+\end{table}

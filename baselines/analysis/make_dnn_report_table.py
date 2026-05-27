@@ -22,18 +22,53 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--plain-output", type=Path, default=None)
     parser.add_argument("--summary-csv", type=Path, default=None)
     parser.add_argument("--caption", default="DNN-based baseline classifier performance results.")
     parser.add_argument("--label", default="tab:dnn-baselines")
     return parser.parse_args()
 
 
-def mean_std(row: pd.Series, metric: str, digits: int = 3) -> str:
+def mean_std(row: pd.Series, metric: str, digits: int = 3, include_std: bool = True) -> str:
     mean = row[f"{metric}_mean"]
     std = row[f"{metric}_std"]
-    if pd.isna(std) or std == 0:
+    if not include_std or pd.isna(std) or std == 0:
         return f"{mean:.{digits}f}"
     return f"{mean:.{digits}f} $\\pm$ {std:.{digits}f}"
+
+
+def write_table(
+    output_path: Path,
+    summary: pd.DataFrame,
+    caption: str,
+    label: str,
+    include_std: bool,
+) -> None:
+    lines = [
+        r"\begin{table}[htbp]",
+        r"\centering",
+        r"\small",
+        rf"\caption{{{latex_escape(caption)}}}",
+        rf"\label{{{latex_escape(label)}}}",
+        r"\begin{tabular}{lrrrrr}",
+        r"\toprule",
+        r"Model & Best epoch & Train loss & Val. loss & Val. MAE & CIL-score \\",
+        r"\midrule",
+    ]
+    for _, row in summary.iterrows():
+        values = [
+            latex_escape(MODEL_LABELS.get(row["model"], str(row["model"]))),
+            mean_std(row, "best_epoch", digits=1, include_std=include_std),
+            mean_std(row, "best_epoch_train_loss", include_std=include_std),
+            mean_std(row, "best_epoch_val_loss", include_std=include_std),
+            mean_std(row, "mae", include_std=include_std),
+            mean_std(row, "cil_score", include_std=include_std),
+        ]
+        lines.append(" & ".join(values) + r" \\")
+    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote {output_path}")
 
 
 def main() -> None:
@@ -63,33 +98,16 @@ def main() -> None:
         summary.to_csv(args.summary_csv, index=False)
         print(f"Wrote {args.summary_csv}")
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    lines = [
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\small",
-        rf"\caption{{{latex_escape(args.caption)}}}",
-        rf"\label{{{latex_escape(args.label)}}}",
-        r"\begin{tabular}{lrrrrr}",
-        r"\toprule",
-        r"Model & Best epoch & Train loss & Val. loss & Val. MAE & CIL-score \\",
-        r"\midrule",
-    ]
-    for _, row in summary.iterrows():
-        values = [
-            latex_escape(MODEL_LABELS.get(row["model"], str(row["model"]))),
-            mean_std(row, "best_epoch", digits=1),
-            mean_std(row, "best_epoch_train_loss"),
-            mean_std(row, "best_epoch_val_loss"),
-            mean_std(row, "mae"),
-            mean_std(row, "cil_score"),
-        ]
-        lines.append(" & ".join(values) + r" \\")
-    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
-    args.output.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Wrote {args.output}")
+    write_table(args.output, summary, args.caption, args.label, include_std=True)
+    plain_output = args.plain_output or args.output.with_name(f"{args.output.stem}_no_variance.tex")
+    write_table(
+        plain_output,
+        summary,
+        args.caption,
+        f"{args.label}-no-variance",
+        include_std=False,
+    )
 
 
 if __name__ == "__main__":
     main()
-

@@ -38,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--plain-output", type=Path, default=None)
     parser.add_argument("--summary-csv", type=Path, default=None)
     parser.add_argument("--metric", choices=["mae", "cil_score", "accuracy", "macro_f1"], default="mae")
     parser.add_argument("--caption", default="Results of classical ML baselines.")
@@ -58,32 +59,25 @@ def best_per_seed_family_classifier(df: pd.DataFrame, metric: str) -> pd.DataFra
     )
 
 
-def format_cell(mean: float, std: float, best: bool, metric: str) -> str:
+def format_cell(mean: float, std: float, best: bool, metric: str, include_std: bool) -> str:
     if pd.isna(mean):
         return "--"
     value = f"{mean:.3f}" if metric == "mae" else f"{100.0 * mean:.2f}"
-    if pd.notna(std) and std > 0:
+    if include_std and pd.notna(std) and std > 0:
         value = f"{value} $\\pm$ {std:.3f}" if metric == "mae" else f"{value} $\\pm$ {100.0 * std:.2f}"
     if best:
         return rf"\textbf{{{value}}}"
     return value
 
 
-def main() -> None:
-    args = parse_args()
-    df = pd.read_csv(args.input)
-    best = best_per_seed_family_classifier(df, args.metric)
-    summary = (
-        best.groupby(["family", "classifier"])[args.metric]
-        .agg(["mean", "std"])
-        .reset_index()
-    )
-
-    if args.summary_csv:
-        args.summary_csv.parent.mkdir(parents=True, exist_ok=True)
-        summary.to_csv(args.summary_csv, index=False)
-        print(f"Wrote {args.summary_csv}")
-
+def write_table(
+    output_path: Path,
+    summary: pd.DataFrame,
+    metric: str,
+    caption: str,
+    label: str,
+    include_std: bool,
+) -> None:
     families = [family for family in FAMILY_ORDER if family in set(summary["family"])]
     classifiers = [
         classifier for classifier in CLASSIFIER_ORDER if classifier in set(summary["classifier"])
@@ -101,17 +95,16 @@ def main() -> None:
             if (family, classifier) in lookup
         ]
         if values:
-            best_by_classifier[classifier] = min(values) if args.metric == "mae" else max(values)
+            best_by_classifier[classifier] = min(values) if metric == "mae" else max(values)
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
     align = "l" + "r" * len(classifiers)
-    metric_label = "Validation MAE" if args.metric == "mae" else args.metric.replace("_", "-")
+    metric_label = "Validation MAE" if metric == "mae" else metric.replace("_", "-")
     lines = [
         r"\begin{table}[htbp]",
         r"\centering",
         r"\small",
-        rf"\caption{{{latex_escape(args.caption)}}}",
-        rf"\label{{{latex_escape(args.label)}}}",
+        rf"\caption{{{latex_escape(caption)}}}",
+        rf"\label{{{latex_escape(label)}}}",
         rf"\begin{{tabular}}{{{align}}}",
         r"\toprule",
         "Method family & " + " & ".join(latex_escape(CLASSIFIER_LABELS[c]) for c in classifiers) + r" \\",
@@ -122,7 +115,7 @@ def main() -> None:
         for classifier in classifiers:
             mean, std = lookup.get((family, classifier), (float("nan"), float("nan")))
             is_best = pd.notna(mean) and mean == best_by_classifier.get(classifier)
-            cells.append(format_cell(mean, std, is_best, args.metric))
+            cells.append(format_cell(mean, std, is_best, metric, include_std))
         lines.append(latex_escape(FAMILY_LABELS.get(family, family)) + " & " + " & ".join(cells) + r" \\")
     lines.extend(
         [
@@ -133,8 +126,36 @@ def main() -> None:
             "",
         ]
     )
-    args.output.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Wrote {args.output}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote {output_path}")
+
+
+def main() -> None:
+    args = parse_args()
+    df = pd.read_csv(args.input)
+    best = best_per_seed_family_classifier(df, args.metric)
+    summary = (
+        best.groupby(["family", "classifier"])[args.metric]
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+
+    if args.summary_csv:
+        args.summary_csv.parent.mkdir(parents=True, exist_ok=True)
+        summary.to_csv(args.summary_csv, index=False)
+        print(f"Wrote {args.summary_csv}")
+
+    write_table(args.output, summary, args.metric, args.caption, args.label, include_std=True)
+    plain_output = args.plain_output or args.output.with_name(f"{args.output.stem}_no_variance.tex")
+    write_table(
+        plain_output,
+        summary,
+        args.metric,
+        args.caption,
+        f"{args.label}-no-variance",
+        include_std=False,
+    )
 
 
 if __name__ == "__main__":

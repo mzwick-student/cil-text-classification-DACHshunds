@@ -83,6 +83,7 @@ results/
 experiments/**
 !experiments/**/
 !experiments/**/*.csv
+!experiments/**/analysis/**
 embeddings/
 submissions/
 requirements.txt

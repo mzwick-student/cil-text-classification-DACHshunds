@@ -1,0 +1,20 @@
+\begin{table}[htbp]
+\centering
+\caption{All DNN baseline validation results.}
+\label{tab:dnn-full-results}
+\begin{tabular}{lllllllll}
+\toprule
+Seed & Model & Embedding & Representation & Best epoch & CIL-score & Macro-F1 & MAE & Seconds \\
+\midrule
+43 & bilstm & fasttext & pretrained\_token\_vectors & 10 & 0.8658 & 0.5661 & 0.5368 & 706.2 \\
+42 & bilstm & fasttext & pretrained\_token\_vectors & 7 & 0.8660 & 0.5636 & 0.5362 & 824.5 \\
+44 & bilstm & fasttext & pretrained\_token\_vectors & 8 & 0.8659 & 0.5659 & 0.5362 & 825.4 \\
+42 & mlp & fasttext & average & 5 & 0.8367 & 0.5087 & 0.6532 & 80.6 \\
+44 & mlp & fasttext & average & 10 & 0.8406 & 0.5205 & 0.6374 & 88.1 \\
+43 & mlp & fasttext & average & 9 & 0.8384 & 0.5153 & 0.6463 & 88.6 \\
+42 & textcnn & fasttext & pretrained\_token\_vectors & 9 & 0.8785 & 0.5941 & 0.4859 & 166.3 \\
+43 & textcnn & fasttext & pretrained\_token\_vectors & 9 & 0.8805 & 0.5996 & 0.4781 & 170.3 \\
+44 & textcnn & fasttext & pretrained\_token\_vectors & 9 & 0.8775 & 0.5948 & 0.4901 & 171.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
