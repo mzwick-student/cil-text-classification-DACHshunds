@@ -1,0 +1,4 @@
+experiment,experiment_id,embedding,input_type,representation,model,status,best_epoch,best_epoch_train_loss,best_epoch_val_loss,train_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
+D1__fasttext__average__mlp,D1,fasttext,document_vector,average,mlp,ok,9,1.140250049520422,1.1182814115948148,88.60232463292778,0.5173809523809524,0.5152572263274179,0.6463492063492063,0.8384126984126984,0.7335132597981695,
+D2__fasttext__pretrained_token_vectors__textcnn,D2,fasttext,token_sequence,pretrained_token_vectors,textcnn,ok,9,0.8657838657251321,0.9303629345742483,170.34181054495275,0.5987301587301588,0.5996137821398311,0.47813492063492063,0.8804662698412699,0.8314945136581301,
+D3__fasttext__pretrained_token_vectors__bilstm,D3,fasttext,token_sequence,pretrained_token_vectors,bilstm,ok,10,0.9803981954710824,0.9841987758969504,706.1963464673609,0.5714285714285714,0.566107697915031,0.5368253968253969,0.8657936507936508,0.8047691720717284,

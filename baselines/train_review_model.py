@@ -256,7 +256,17 @@ def run_experiment(args: argparse.Namespace) -> tuple[TransformerExperimentResul
         best_epoch = epoch_history[0]
     else:
         start = time.perf_counter()
-        trainer.train()
+        checkpoint = args.resume_from_checkpoint
+        if checkpoint is None:
+            checkpoints = sorted(
+                run_output_dir.glob("checkpoint-*"),
+                key=lambda path: int(path.name.split("-")[-1]),
+            )
+            if checkpoints:
+                checkpoint = str(checkpoints[-1])
+                print(f"Resuming from checkpoint: {checkpoint}", flush=True)
+
+        trainer.train(resume_from_checkpoint=checkpoint)
         train_seconds = time.perf_counter() - start
         epoch_history = extract_epoch_history(experiment, trainer.state.log_history)
         if not epoch_history:
@@ -368,6 +378,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--eval-only", action="store_true")
     parser.add_argument("--ignore-mismatched-sizes", action="store_true")
+    parser.add_argument("--resume-from-checkpoint", type=str, default=None)
     return parser.parse_args()
 
 

@@ -1,0 +1,2 @@
+experiment,epoch,train_loss,val_loss,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa
+transformer__nlptown__bert-base-multilingual-uncased-sentiment__eval_only,0.0,,0.8404759764671326,0.6389285714285714,0.6334623683025564,0.4224206349206349,0.8943948412698413,0.8636685920645875

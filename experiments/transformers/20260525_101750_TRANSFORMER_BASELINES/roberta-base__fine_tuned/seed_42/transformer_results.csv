@@ -1,0 +1,2 @@
+experiment,family,model,variant,status,best_epoch,best_epoch_train_loss,best_epoch_val_loss,train_seconds,eval_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
+transformer__roberta-base__fine_tuned,transformer,roberta-base,fine_tuned,ok,3.0,0.7242669067382812,0.8328005075454712,3844.3495066679898,39.81995752999501,0.6481746031746032,0.6464502699742678,0.39805555555555555,0.9004861111111111,0.8755976667867681,Final eval score=0.90049

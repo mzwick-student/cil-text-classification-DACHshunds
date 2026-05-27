@@ -1,0 +1,6 @@
+experiment,epoch,train_loss,val_loss,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa
+transformer__bert-base-uncased__fine_tuned,1.0,1.6128428955078125,1.6101562976837158,0.2,0.06666666666666667,2.0,0.5,0.0
+transformer__bert-base-uncased__fine_tuned,2.0,1.609994384765625,1.6093374490737915,0.2,0.06666666666666667,1.4,0.65,0.0
+transformer__bert-base-uncased__fine_tuned,3.0,1.60987158203125,1.6091797351837158,0.2,0.06666666666666667,2.0,0.5,0.0
+transformer__bert-base-uncased__fine_tuned,4.0,1.6096046142578124,1.6091797351837158,0.2,0.06666666666666667,2.0,0.5,0.0
+transformer__bert-base-uncased__fine_tuned,5.0,1.6094337158203125,1.609375,0.2,0.06666666666666667,2.0,0.5,0.0
