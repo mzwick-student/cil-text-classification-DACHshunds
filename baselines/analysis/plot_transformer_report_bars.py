@@ -55,7 +55,7 @@ def main() -> None:
         .agg(["mean", "std"])
         .reset_index()
     )
-    ascending = args.metric == "mae"
+    ascending = args.metric != "mae"
     summary = summary.sort_values("mean", ascending=ascending).reset_index(drop=True)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
