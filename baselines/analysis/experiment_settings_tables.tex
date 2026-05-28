@@ -1,0 +1,100 @@
+\begin{table}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{0.92}
+\caption{Experiment settings for classical ML baselines.}
+\label{tab:classic-ml-settings}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lp{0.66\columnwidth}}
+\toprule
+Setting & Value \\
+\midrule
+Random seeds & 42, 43, 44 \\
+Text preprocessing & Whitespace normalization; vectorizers lowercase internally \\
+Experiment mode & All classical baselines: sparse lexical and static embeddings \\
+Sparse features & BoW word n-grams $(1,3)$; TF-IDF word n-grams $(1,3)$; TF-IDF character-wb n-grams $(3,6)$ \\
+Sparse feature cap & 250,000 features \\
+TF-IDF settings & Sublinear term frequency enabled for TF-IDF features \\
+Static embeddings & GloVe and fastText vectors \\
+Embedding pooling & Average, TF-IDF-weighted average, mean+max pooling \\
+Classifiers & Logistic Regression, Linear SVM, Ridge Classifier \\
+Classifier settings & $C=1.0$ for Logistic Regression/SVM, Ridge $\alpha=1.0$ \\
+Maximum iterations & 100 for iterative linear models \\
+Selection criterion & Validation MAE / CIL-score; best variant reported per family \\
+Reported metrics & Accuracy, macro-F1, MAE, CIL-score, quadratic weighted kappa \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{0.92}
+\caption{Experiment settings for fastText DNN baselines.}
+\label{tab:dnn-settings}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lp{0.66\columnwidth}}
+\toprule
+Setting & Value \\
+\midrule
+Random seeds & 42, 43, 44 \\
+Embedding source & fastText vectors \\
+Models & MLP, TextCNN, BiLSTM \\
+Input representations & Averaged fastText document vectors for MLP; fastText token sequences for TextCNN/BiLSTM \\
+Epochs & 10 \\
+Batch size & 128 \\
+Optimizer & Adam \\
+Learning rate & $1 \times 10^{-3}$ \\
+Weight decay & $1 \times 10^{-4}$ \\
+Loss & Cross-entropy loss \\
+Dropout & 0.3 \\
+MLP hidden dimension & 256 \\
+TextCNN filters & 128 filters per kernel size \\
+TextCNN kernel sizes & 3, 4, 5 \\
+BiLSTM hidden dimension & 128 \\
+Maximum sequence length & 256 tokens \\
+Maximum sequence vocabulary & 200,000 tokens \\
+Model selection & Best validation CIL-score over epochs \\
+Reported metrics & Train loss, validation loss, accuracy, macro-F1, MAE, CIL-score, quadratic weighted kappa \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{0.92}
+\caption{Experiment settings for transformer baselines.}
+\label{tab:transformer-settings}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lp{0.66\columnwidth}}
+\toprule
+Setting & Value \\
+\midrule
+Random seeds & 42, 43, 44 \\
+Backbones & DistilBERT, BERT-base, RoBERTa-base, XLM-R-large, NLP-Town multilingual BERT \\
+Variants & Fine-tuned for all backbones; additional eval-only run for NLP-Town multilingual BERT \\
+Maximum sequence length & 256 tokens \\
+Epochs & 3 \\
+Training batch size & 16 for base models; 8 for XLM-R-large \\
+Evaluation batch size & 32 for base models; 16 for XLM-R-large \\
+Optimizer/scheduler & Hugging Face Trainer default optimizer with linear learning-rate schedule \\
+Learning rate & $2 \times 10^{-5}$ \\
+Weight decay & 0.01 \\
+Warmup ratio & 0.06 \\
+Mixed precision & FP16 enabled \\
+Logging & Every 500 training steps \\
+Evaluation strategy & Once per epoch \\
+Checkpointing & Save once per epoch; keep best model according to validation CIL-score \\
+Checkpoint limit & 1 checkpoint retained per run \\
+Model selection & Best validation CIL-score \\
+Reported metrics & Validation loss, accuracy, macro-F1, MAE, CIL-score, quadratic weighted kappa \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
