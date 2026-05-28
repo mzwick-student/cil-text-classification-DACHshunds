@@ -1,0 +1,104 @@
+\begin{table}[htbp]
+\centering
+\caption{All classic baseline validation results.}
+\label{tab:classic-full-results}
+\begin{tabular}{lllllllll}
+\toprule
+Seed & Family & Representation & Variant & Classifier & CIL-score & Macro-F1 & MAE & Seconds \\
+\midrule
+43 & bow & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8530 & 0.5438 & 0.5882 & 0.2 \\
+42 & bow & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8559 & 0.5510 & 0.5765 & 0.3 \\
+44 & bow & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8561 & 0.5519 & 0.5756 & 0.3 \\
+42 & bow & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8676 & 0.5683 & 0.5297 & 41.5 \\
+43 & bow & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8653 & 0.5641 & 0.5389 & 43.1 \\
+44 & bow & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8661 & 0.5681 & 0.5356 & 47.5 \\
+42 & bow & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8394 & 0.5143 & 0.6423 & 258.9 \\
+43 & bow & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8371 & 0.5104 & 0.6517 & 265.5 \\
+44 & bow & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8387 & 0.5134 & 0.6452 & 292.1 \\
+42 & bow & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8055 & 0.4654 & 0.7780 & 1111.4 \\
+43 & bow & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8038 & 0.4637 & 0.7847 & 1112.1 \\
+44 & bow & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8044 & 0.4615 & 0.7825 & 1126.2 \\
+43 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7887 & 0.4450 & 0.8454 & 0.9 \\
+42 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7890 & 0.4448 & 0.8440 & 0.9 \\
+44 & fasttext & fasttext average & average & ridge\_classifier & 0.8057 & 0.4702 & 0.7773 & 0.9 \\
+43 & fasttext & fasttext average & average & ridge\_classifier & 0.8081 & 0.4718 & 0.7675 & 0.9 \\
+44 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7867 & 0.4413 & 0.8533 & 1.0 \\
+42 & fasttext & fasttext average & average & ridge\_classifier & 0.8083 & 0.4709 & 0.7667 & 1.0 \\
+44 & fasttext & fasttext mean\_max & mean\_max & ridge\_classifier & 0.8121 & 0.4816 & 0.7516 & 2.0 \\
+42 & fasttext & fasttext mean\_max & mean\_max & ridge\_classifier & 0.8110 & 0.4810 & 0.7558 & 2.1 \\
+43 & fasttext & fasttext mean\_max & mean\_max & ridge\_classifier & 0.8113 & 0.4806 & 0.7550 & 2.1 \\
+43 & fasttext & fasttext average & average & logreg & 0.8175 & 0.4878 & 0.7302 & 31.1 \\
+44 & fasttext & fasttext average & average & logreg & 0.8161 & 0.4857 & 0.7358 & 31.1 \\
+44 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & logreg & 0.7994 & 0.4604 & 0.8023 & 31.6 \\
+43 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & logreg & 0.8008 & 0.4591 & 0.7968 & 32.4 \\
+42 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & logreg & 0.8008 & 0.4593 & 0.7967 & 33.1 \\
+42 & fasttext & fasttext average & average & logreg & 0.8180 & 0.4844 & 0.7280 & 33.8 \\
+44 & fasttext & fasttext mean\_max & mean\_max & logreg & 0.8053 & 0.4710 & 0.7786 & 54.3 \\
+42 & fasttext & fasttext mean\_max & mean\_max & logreg & 0.8063 & 0.4713 & 0.7747 & 54.6 \\
+43 & fasttext & fasttext mean\_max & mean\_max & logreg & 0.8060 & 0.4688 & 0.7762 & 55.1 \\
+43 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7913 & 0.4474 & 0.8350 & 87.8 \\
+44 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7889 & 0.4438 & 0.8445 & 95.2 \\
+42 & fasttext & fasttext tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7911 & 0.4477 & 0.8358 & 95.7 \\
+44 & fasttext & fasttext average & average & linear\_svm & 0.8095 & 0.4748 & 0.7621 & 124.6 \\
+42 & fasttext & fasttext average & average & linear\_svm & 0.8116 & 0.4772 & 0.7537 & 127.8 \\
+43 & fasttext & fasttext average & average & linear\_svm & 0.8118 & 0.4779 & 0.7529 & 131.4 \\
+42 & fasttext & fasttext mean\_max & mean\_max & linear\_svm & 0.8175 & 0.4895 & 0.7301 & 237.2 \\
+43 & fasttext & fasttext mean\_max & mean\_max & linear\_svm & 0.8172 & 0.4887 & 0.7313 & 241.0 \\
+44 & fasttext & fasttext mean\_max & mean\_max & linear\_svm & 0.8172 & 0.4884 & 0.7311 & 247.3 \\
+44 & glove & glove tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7763 & 0.4244 & 0.8948 & 0.9 \\
+42 & glove & glove average & average & ridge\_classifier & 0.7906 & 0.4401 & 0.8374 & 0.9 \\
+42 & glove & glove tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7732 & 0.4140 & 0.9072 & 0.9 \\
+43 & glove & glove average & average & ridge\_classifier & 0.7921 & 0.4425 & 0.8314 & 1.0 \\
+44 & glove & glove average & average & ridge\_classifier & 0.7937 & 0.4467 & 0.8253 & 1.0 \\
+43 & glove & glove tfidf\_weighted & tfidf\_weighted & ridge\_classifier & 0.7736 & 0.4156 & 0.9055 & 1.2 \\
+42 & glove & glove mean\_max & mean\_max & ridge\_classifier & 0.7893 & 0.4424 & 0.8426 & 2.0 \\
+44 & glove & glove mean\_max & mean\_max & ridge\_classifier & 0.7934 & 0.4473 & 0.8262 & 2.0 \\
+43 & glove & glove mean\_max & mean\_max & ridge\_classifier & 0.7931 & 0.4484 & 0.8275 & 2.2 \\
+44 & glove & glove tfidf\_weighted & tfidf\_weighted & logreg & 0.7845 & 0.4319 & 0.8621 & 30.3 \\
+43 & glove & glove average & average & logreg & 0.8005 & 0.4549 & 0.7979 & 30.6 \\
+42 & glove & glove average & average & logreg & 0.7987 & 0.4494 & 0.8052 & 30.6 \\
+44 & glove & glove average & average & logreg & 0.8008 & 0.4565 & 0.7967 & 31.0 \\
+42 & glove & glove tfidf\_weighted & tfidf\_weighted & logreg & 0.7852 & 0.4308 & 0.8591 & 31.6 \\
+43 & glove & glove tfidf\_weighted & tfidf\_weighted & logreg & 0.7838 & 0.4301 & 0.8649 & 31.7 \\
+42 & glove & glove mean\_max & mean\_max & logreg & 0.7894 & 0.4401 & 0.8426 & 52.7 \\
+44 & glove & glove mean\_max & mean\_max & logreg & 0.7914 & 0.4430 & 0.8346 & 53.0 \\
+43 & glove & glove mean\_max & mean\_max & logreg & 0.7888 & 0.4385 & 0.8450 & 53.8 \\
+44 & glove & glove tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7788 & 0.4268 & 0.8847 & 171.7 \\
+42 & glove & glove tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7763 & 0.4189 & 0.8948 & 177.8 \\
+43 & glove & glove tfidf\_weighted & tfidf\_weighted & linear\_svm & 0.7765 & 0.4197 & 0.8939 & 187.5 \\
+42 & glove & glove average & average & linear\_svm & 0.7944 & 0.4444 & 0.8225 & 202.4 \\
+44 & glove & glove average & average & linear\_svm & 0.7969 & 0.4499 & 0.8125 & 214.4 \\
+43 & glove & glove average & average & linear\_svm & 0.7951 & 0.4466 & 0.8196 & 223.5 \\
+42 & glove & glove mean\_max & mean\_max & linear\_svm & 0.7959 & 0.4497 & 0.8165 & 336.1 \\
+44 & glove & glove mean\_max & mean\_max & linear\_svm & 0.7994 & 0.4556 & 0.8024 & 342.6 \\
+43 & glove & glove mean\_max & mean\_max & linear\_svm & 0.7995 & 0.4545 & 0.8018 & 346.9 \\
+43 & majority & constant & most\_frequent & dummy\_most\_frequent & 0.5000 & 0.0667 & 2.0000 & 0.0 \\
+44 & majority & constant & most\_frequent & dummy\_most\_frequent & 0.5000 & 0.0667 & 2.0000 & 0.0 \\
+42 & majority & constant & most\_frequent & dummy\_most\_frequent & 0.5000 & 0.0667 & 2.0000 & 0.0 \\
+42 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & complement\_nb & 0.8337 & 0.5136 & 0.6652 & 0.9 \\
+43 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & complement\_nb & 0.8330 & 0.5117 & 0.6679 & 1.0 \\
+44 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & complement\_nb & 0.8333 & 0.5140 & 0.6669 & 1.3 \\
+42 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & linear\_svm & 0.8565 & 0.5494 & 0.5739 & 92.1 \\
+44 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & linear\_svm & 0.8572 & 0.5532 & 0.5713 & 95.5 \\
+43 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & linear\_svm & 0.8565 & 0.5509 & 0.5739 & 103.5 \\
+42 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & logreg & 0.8693 & 0.5804 & 0.5229 & 159.9 \\
+44 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & logreg & 0.8681 & 0.5780 & 0.5276 & 162.7 \\
+43 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & logreg & 0.8677 & 0.5775 & 0.5291 & 165.6 \\
+42 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & ridge\_classifier & 0.8578 & 0.5525 & 0.5689 & 401.8 \\
+43 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & ridge\_classifier & 0.8573 & 0.5527 & 0.5707 & 412.6 \\
+44 & tfidf\_char & char\_wb n-grams=(3, 6) & char\_wb\_3\_6 & ridge\_classifier & 0.8576 & 0.5557 & 0.5696 & 416.6 \\
+42 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8584 & 0.5538 & 0.5665 & 0.2 \\
+43 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8546 & 0.5470 & 0.5815 & 0.2 \\
+44 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & complement\_nb & 0.8581 & 0.5549 & 0.5677 & 0.2 \\
+42 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8612 & 0.5580 & 0.5550 & 20.0 \\
+43 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8597 & 0.5537 & 0.5612 & 21.0 \\
+44 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & linear\_svm & 0.8609 & 0.5558 & 0.5564 & 22.4 \\
+43 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8713 & 0.5860 & 0.5146 & 41.6 \\
+42 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8747 & 0.5928 & 0.5014 & 42.3 \\
+42 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8633 & 0.5631 & 0.5467 & 46.3 \\
+43 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8622 & 0.5590 & 0.5511 & 46.5 \\
+44 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & ridge\_classifier & 0.8632 & 0.5621 & 0.5471 & 47.6 \\
+44 & tfidf\_word & word n-grams=(1, 3) & word\_1\_3 & logreg & 0.8752 & 0.5957 & 0.4990 & 50.9 \\
+\bottomrule
+\end{tabular}
+\end{table}

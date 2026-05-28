@@ -1,0 +1,14 @@
+\begin{table}[htbp]
+\centering
+\caption{Fastest DNN baseline per model family.}
+\label{tab:dnn-fastest-families}
+\begin{tabular}{lllllllll}
+\toprule
+Seed & Model & Embedding & Representation & Best epoch & CIL-score & Macro-F1 & MAE & Seconds \\
+\midrule
+42 & mlp & fasttext & average & 5 & 0.8367 & 0.5087 & 0.6532 & 80.6 \\
+42 & textcnn & fasttext & pretrained\_token\_vectors & 9 & 0.8785 & 0.5941 & 0.4859 & 166.3 \\
+43 & bilstm & fasttext & pretrained\_token\_vectors & 10 & 0.8658 & 0.5661 & 0.5368 & 706.2 \\
+\bottomrule
+\end{tabular}
+\end{table}

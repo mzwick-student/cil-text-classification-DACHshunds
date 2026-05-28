@@ -1,0 +1,14 @@
+\begin{table}[htbp]
+\centering
+\caption{DNN baseline validation metrics across five seeds.}
+\label{tab:dnn-seed-summary}
+\begin{tabular}{lrrrr}
+\toprule
+model & cil\_score & mae & accuracy & macro\_f1 \\
+\midrule
+bilstm & 0.8659 $\pm$ 0.0001 & 0.5364 $\pm$ 0.0004 & 0.5674 $\pm$ 0.0038 & 0.5652 $\pm$ 0.0014 \\
+mlp & 0.8386 $\pm$ 0.0020 & 0.6457 $\pm$ 0.0079 & 0.5170 $\pm$ 0.0039 & 0.5148 $\pm$ 0.0059 \\
+textcnn & 0.8788 $\pm$ 0.0015 & 0.4847 $\pm$ 0.0061 & 0.5976 $\pm$ 0.0010 & 0.5962 $\pm$ 0.0030 \\
+\bottomrule
+\end{tabular}
+\end{table}

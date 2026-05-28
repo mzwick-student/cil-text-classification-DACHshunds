@@ -78,6 +78,16 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Project experiment artifacts
+results/
+experiments/**
+!experiments/**/
+!experiments/**/*.csv
+!experiments/**/analysis/**
+embeddings/
+submissions/
+requirements.txt
+
 # IPython
 profile_default/
 ipython_config.py

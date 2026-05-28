@@ -1,0 +1,2 @@
+experiment,family,model,variant,status,best_epoch,best_epoch_train_loss,best_epoch_val_loss,train_seconds,eval_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
+transformer__nlptown__bert-base-multilingual-uncased-sentiment__fine_tuned,transformer,nlptown/bert-base-multilingual-uncased-sentiment,fine_tuned,ok,3.0,0.6793101196289062,0.8472365736961365,3910.166201771004,35.393499273006455,0.648968253968254,0.6479692790911491,0.39904761904761904,0.9002380952380953,0.8730426592362936,Final eval score=0.90024
