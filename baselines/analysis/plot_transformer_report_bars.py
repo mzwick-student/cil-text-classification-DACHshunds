@@ -16,6 +16,7 @@ MODEL_LABELS = {
     "distilbert-base-uncased": "DistilBERT",
     "bert-base-uncased": "BERT",
     "roberta-base": "RoBERTa",
+    "xlm-roberta-large": "XLM-R-large",
     "nlptown/bert-base-multilingual-uncased-sentiment": "NLP-Town BERT",
 }
 COLORS = ["#21c7d9", "#2f7ebc", "#f28e2b", "#7f58af", "#59a14f"]
@@ -58,7 +59,15 @@ def main() -> None:
     summary = summary.sort_values("mean", ascending=ascending).reset_index(drop=True)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7.6, 4.2))
+    plt.rcParams.update(
+        {
+            "font.size": 15,
+            "axes.labelsize": 18,
+            "xtick.labelsize": 14,
+            "ytick.labelsize": 14,
+        }
+    )
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
     x = range(len(summary))
     ax.bar(
         x,
@@ -86,7 +95,7 @@ def main() -> None:
     else:
         ax.set_ylim(max(0.0, summary["mean"].min() - 0.03), min(1.0, summary["mean"].max() + 0.03))
     for idx, row in summary.iterrows():
-        ax.text(idx, row["mean"], f"{row['mean']:.3f}", ha="center", va="bottom", fontsize=8)
+        ax.text(idx, row["mean"], f"{row['mean']:.3f}", ha="center", va="bottom", fontsize=13)
     fig.tight_layout()
 
     pdf_path = args.output_dir / f"{args.prefix}.pdf"

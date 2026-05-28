@@ -50,15 +50,14 @@ def write_table(
         r"\small",
         rf"\caption{{{latex_escape(caption)}}}",
         rf"\label{{{latex_escape(label)}}}",
-        r"\begin{tabular}{lrrrrr}",
+        r"\begin{tabular}{lrrrr}",
         r"\toprule",
-        r"Model & Best epoch & Train loss & Val. loss & Val. MAE & CIL-score \\",
+        r"Model & Train loss & Val. loss & Val. MAE & CIL-score \\",
         r"\midrule",
     ]
     for _, row in summary.iterrows():
         values = [
             latex_escape(MODEL_LABELS.get(row["model"], str(row["model"]))),
-            mean_std(row, "best_epoch", digits=1, include_std=include_std),
             mean_std(row, "best_epoch_train_loss", include_std=include_std),
             mean_std(row, "best_epoch_val_loss", include_std=include_std),
             mean_std(row, "mae", include_std=include_std),
@@ -81,7 +80,7 @@ def main() -> None:
 
     summary = (
         df.groupby("model")[
-            ["best_epoch", "best_epoch_train_loss", "best_epoch_val_loss", "mae", "cil_score"]
+            ["best_epoch_train_loss", "best_epoch_val_loss", "mae", "cil_score"]
         ]
         .agg(["mean", "std"])
         .reset_index()
