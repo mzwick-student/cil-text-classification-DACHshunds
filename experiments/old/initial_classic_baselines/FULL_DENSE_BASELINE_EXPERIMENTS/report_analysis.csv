@@ -1,4 +1,0 @@
-family,experiment,representation,variant,classifier,status,train_seconds,predict_seconds,accuracy,macro_f1,mae,cil_score,quadratic_weighted_kappa,notes
-fasttext,fasttext__average__logreg,fasttext average,average,logreg,ok,32.01334115595091,0.051844690926373,0.4893253968253968,0.4844344026440479,0.7279761904761904,0.8180059523809524,0.6818847165749821,feature_seconds=98.08; vocab_cov=0.8222; token_cov=0.9846; loaded_vectors=96500
-glove,glove__average__logreg,glove average,average,logreg,ok,30.471465483075008,0.0496809009928256,0.4561507936507936,0.4494236508762688,0.8051587301587302,0.7987103174603174,0.6360238598610692,feature_seconds=44.69; vocab_cov=0.3329; token_cov=0.8537; loaded_vectors=39069
-majority,majority__most_frequent,constant,most_frequent,dummy_most_frequent,ok,0.0086688980227336,0.0002088090404868,0.2,0.0666666666666666,2.0,0.5,0.0,Always predicts the most frequent training label.
