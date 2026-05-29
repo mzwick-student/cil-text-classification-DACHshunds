@@ -247,16 +247,20 @@ The W&B notebooks assume access to the corresponding W&B project history.
 ## AI Usage Declaration
 
 **Tool used:** Claude Opus 4.7  
-**File(s) affected:** `sota_runner.ipynb`  
-**Purpose:** Debugging numerical instability issues in training, including hyperparameters, model architectures, and objective functions. Also used to help implement validation, final test submission templates, and config formatting.
+**File(s) affected:** `sota_runner.ipynb`, final paper
+**Purpose:** Debugging numerical instability issues in training, including hyperparameters, model architectures, and objective functions. Also used to help implement validation, final test submission templates, and config formatting. In final paper, figuring out how to reduce page length.
 
 **Tool used:** Claude Sonnet 4.6  
-**File(s) affected:** `sota_runner.ipynb`  
-**Purpose:** Fixing smaller syntax issues and implementing small train/validation lines where tensor or array shape mismatches were unclear.
+**File(s) affected:** `sota_runner.ipynb`, final paper
+**Purpose:** Fixing smaller syntax issues and implementing small train/validation lines where tensor or array shape mismatches were unclear. In final paper, making sentence-level text reductions.
 
 **Tool used:** Codex  
-**File(s) affected:** `baselines/`, `baselines.ipynb`, `dnn_baselines.ipynb`, `load_embeddings.ipynb`, `transformer_baselines.ipynb`  
+**File(s) affected:** `baselines/`, `baselines.ipynb`, `dnn_baselines.ipynb`, `load_embeddings.ipynb`, `transformer_baselines.ipynb`, `configs/`, `experiments/`, `slurm/`, `visualizations/`
 **Purpose:** Debugging, restructuring, and fixing smaller issues in the baseline workflows. Also used to help implement validation, final test submission templates, and config formatting.
+
+**Tool used:** ChatGPT  
+**File(s) affected:** final paper
+**Purpose:** Assisting in converting list of main points to paragraph form, also LaTeX syntax and rewording to reduce page length.
 
 ## Notes
 
