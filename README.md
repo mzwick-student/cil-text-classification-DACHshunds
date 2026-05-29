@@ -18,16 +18,17 @@ Install the experiment dependencies in your environment:
 pip install -r requirements-experiments.txt
 ```
 
-Run plain BERT:
+Run the default LoRA XLM-R regression baseline:
 
 ```bash
-python scripts/run_experiment.py --config configs/bert_base.json
+python scripts/run_experiment.py --config configs/lora_bert_default.json
 ```
 
-Run LoRA-BERT:
+Run the PCGrad or GradVac interference variants:
 
 ```bash
-python scripts/run_experiment.py --config configs/lora_bert_base.json
+python scripts/run_experiment.py --config configs/lora_bert_pcgrad.json
+python scripts/run_experiment.py --config configs/lora_bert_gradvac.json
 ```
 
 Before pushing/logging, make sure you are logged in:
@@ -41,7 +42,7 @@ Override any config field from the CLI:
 
 ```bash
 python scripts/run_experiment.py \
-  --config configs/lora_bert_base.json \
+  --config configs/lora_bert_default.json \
   --set seeds='[1,2,3,4,5]' \
   --set trainer='"pcgrad"' \
   --set model.geometry='"circular"' \
@@ -51,7 +52,7 @@ python scripts/run_experiment.py \
 Submit the Slurm template:
 
 ```bash
-sbatch --export=CONFIG=configs/lora_bert_base.json,SEED=1 slurm/run_experiment.sbatch
+sbatch --export=CONFIG=configs/lora_bert_default.json,SEED=1 slurm/run_experiment.sbatch
 ```
 
 From Jupyter:
@@ -59,7 +60,7 @@ From Jupyter:
 ```python
 from experiments import configs_for_seeds, load_config, run_experiment
 
-cfg = load_config("configs/lora_bert_base.json")
+cfg = load_config("configs/lora_bert_default.json")
 for seed, run_cfg in configs_for_seeds(cfg):
     metrics = run_experiment(run_cfg, seed)
     print(seed, metrics)
@@ -117,7 +118,6 @@ The Slurm-ready ordinal experiments all use `xlm-roberta-base` LoRA and run seed
 
 - `configs/ordinal_ce_xlmr.json`: CE classifier, reporting both posterior argmax/MAP and Bayes-MAE decoding
 - `configs/ordinal_regression_xlmr.json`: regression, reporting both rounding and validation-tuned MAE threshold decoding
-- `configs/ordinal_coral_xlmr.json`: CORAL-style ordinal regression
 - `configs/ordinal_soft_label_ce_xlmr.json`: ordinal soft-label CE with `tau=[0.60]*5`, `rho=[0.05]*5`, empirical prior, decoded with Bayes-MAE
 
 Submit one experiment:

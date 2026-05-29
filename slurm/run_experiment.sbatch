@@ -11,7 +11,7 @@ set -euo pipefail
 
 cd "${SLURM_SUBMIT_DIR}"
 
-CONFIG="${CONFIG:-configs/lora_bert_base.json}"
+CONFIG="${CONFIG:-configs/lora_bert_default.json}"
 EPOCHS="${EPOCHS:-3}"
 
 ARGS=(--config "${CONFIG}" --set training.epochs="${EPOCHS}")
