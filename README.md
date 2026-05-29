@@ -18,3 +18,13 @@ Older exploratory notebooks are kept in `exploratory_notebooks/`.
 2. Changing the Config cell accordingly, train the regressor and the classifier (up to Section 9).
 3. Optionally, validate the regressor and classifier in Section 9.
 4. Build the submission in Section 10, caching the test logits for both regression and classification.  
+
+## AI Usage Declaration
+
+**Tool used:** Claude Opus 4.7
+**File(s) affected:** sota_runner.ipynb
+**Purpose:** Debugging numerical instability issues in training (suggesting hyperparameters, model architectures, and objective functions). Also to help implement validation and final test submission templates and config formatting. 
+
+**Tool used:** Claude Sonnet 4.6
+**File(s) affected:** sota_runner.ipynb
+**Purpose:** Smaller syntax issues and implementing small lines of code in train/validation where tensor/array shape mismatches are unclear. 
