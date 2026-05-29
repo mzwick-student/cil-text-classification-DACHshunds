@@ -254,6 +254,10 @@ The W&B notebooks assume access to the corresponding W&B project history.
 **File(s) affected:** `sota_runner.ipynb`  
 **Purpose:** Fixing smaller syntax issues and implementing small train/validation lines where tensor or array shape mismatches were unclear.
 
+**Tool used:** Codex  
+**File(s) affected:** `baselines/`, `baselines.ipynb`, `dnn_baselines.ipynb`, `load_embeddings.ipynb`, `transformer_baselines.ipynb`  
+**Purpose:** Debugging, restructuring, and fixing smaller issues in the baseline workflows. Also used to help implement validation, final test submission templates, and config formatting.
+
 ## Notes
 
 - Config-driven experiments use `data/train_lang.csv` and a stratified 90/10 train-validation split.
