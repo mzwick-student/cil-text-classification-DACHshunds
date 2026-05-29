@@ -230,3 +230,5 @@ __marimo__/
 # Custom
 data/*bert*.pt
 data/model.bin
+outputs/
+.slurm_tokens
